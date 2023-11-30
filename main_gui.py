@@ -72,7 +72,7 @@ def perform_manual_comparison():
         sg.popup('基准图像加载失败')
         return
     if marker_ellipse is None:
-        marker_ellipse, marker_rect = tsfit.find_marker(img1, marker_img)
+        marker_ellipse, marker_rect = tsfit.find_marker(img1)
     img2 = cv2.imread("target_image.bmp", cv2.IMREAD_GRAYSCALE)
     if img2 is None:
         sg.popup('目标图像加载失败')
@@ -154,8 +154,6 @@ def auto_compare_op():
     window['-OFFSET-'].update(f'({x_offset}, {y_offset})')
 
 
-
-# Sample OpenCV image (replace this with your actual OpenCV image)
 previewFrame = np.zeros((PV_W, PV_H, 1), dtype=np.uint8)  # Black square
 
 # Convert the OpenCV image to bytes

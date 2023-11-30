@@ -2,3 +2,12 @@
 *.bak
 .vscode
 __pycache__
+*.png
+*.bmp
+test/
+cam/
+doc/
+tmp/
+.env
+*.dwg
+*.svg
