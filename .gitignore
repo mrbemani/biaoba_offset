@@ -11,3 +11,6 @@ tmp/
 .env
 *.dwg
 *.svg
+build/
+dist/
+*.spec
