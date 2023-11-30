@@ -19,6 +19,7 @@ __author__ = 'Mr.Bemani'
 mmpp = 2.0  # mm per pixel
 PV_W = 512
 PV_H = 512
+MARKER_DIAMETER = 100.0 # mm
 settings = {}  # Global dictionary to store settings
 
 # Modify the font size for text and buttons
@@ -64,7 +65,7 @@ def convert_to_bytes(image, format='PNG'):
         data = output_bytes.getvalue()
     return data
 
-def perform_manual_comparison():
+def perform_manual_comparison(use_mmpp: bool = True):
     global marker_rect, marker_ellipse, mmpp
     # Perform the operation
     img1 = cv2.imread("base_image.bmp", cv2.IMREAD_GRAYSCALE)
@@ -77,17 +78,20 @@ def perform_manual_comparison():
     if img2 is None:
         sg.popup('目标图像加载失败')
         return
-    # (mm per pixel) mmpp = 100.0mm / average circumference of the ellipse
-    mmpp = 100.0 / ((marker_ellipse[1][0] + marker_ellipse[1][1]) / 2.0 * np.pi)
+    # (mm per pixel) mmpp = 100.0mm / longest axis of marker ellipse
+    mmpp = MARKER_DIAMETER / max(marker_ellipse[1][0], marker_ellipse[1][1])
     img1 = img1[marker_rect[1]:marker_rect[1]+marker_rect[3], marker_rect[0]:marker_rect[0]+marker_rect[2]]
     img2 = img2[marker_rect[1]:marker_rect[1]+marker_rect[3], marker_rect[0]:marker_rect[0]+marker_rect[2]]
     x, y = tg.perform_compare(img1, img2)
-    return x/mmpp, y/mmpp  # Example offset values
+    if use_mmpp:
+        return x/mmpp, y/mmpp  # Example offset values
+    else:
+        return x, y, mmpp
 
 
-def get_image(loading_window, save_file):
+def get_image(loading_window, save_file, nPhoto=20):
     global previewFrame, marker_ellipse, marker_rect
-    cam.nSaveNum = 20
+    cam.nSaveNum = nPhoto
     cam.bSaveBmp = True
     base_image_array.clear()
     while cam.bSaveBmp:
@@ -159,88 +163,91 @@ previewFrame = np.zeros((PV_W, PV_H, 1), dtype=np.uint8)  # Black square
 # Convert the OpenCV image to bytes
 image_bytes = convert_to_bytes(cv2.cvtColor(previewFrame, cv2.COLOR_BGR2RGB))
 
-# Define the layout for the GUI
-layout = [
-    [
-        sg.Image(data=image_bytes, key='-IMAGE-'),
-        sg.VSeparator(),
-        sg.Column([
-            [sg.Button('获取基准图像', key='-GET_BASE_IMAGE-', font=button_font)],
-            [sg.Button('手动比较', key='-MANUAL_COMPARE-', font=button_font)],
-            [sg.HorizontalSeparator()],
-            [sg.Checkbox('自动比较', default=settings['auto_compare'], key='-AUTO_COMPARE-', font=text_font)],
-            [sg.Text('自动比较间隔 (小时)', font=text_font), sg.InputText(str(settings['compare_interval']), size=(5, 1), key='-INTERVAL-', font=text_font)],
-            [sg.HorizontalSeparator()],
-            [sg.Text('偏移 (mm):', font=text_font), sg.Text('(x, y)', key='-OFFSET-', font=text_font)],
-            [sg.HorizontalSeparator()],
-            [sg.Text('曝光 (us)', font=text_font), sg.InputText(str(settings['exposure']), size=(10, 1), key='-EXPOSURE-', font=text_font)],
-            [sg.HorizontalSeparator()],
-            [sg.Button('应用设置', key='-APPLY-', font=button_font), sg.Button('还原设置', key='-RESET-', font=button_font)]
-        ], vertical_alignment='top')
+
+if __name__ == '__main__'
+    # Define the layout for the GUI
+    layout = [
+        [
+            sg.Image(data=image_bytes, key='-IMAGE-'),
+            sg.VSeparator(),
+            sg.Column([
+                [sg.Button('获取基准图像', key='-GET_BASE_IMAGE-', font=button_font)],
+                [sg.Button('手动比较', key='-MANUAL_COMPARE-', font=button_font)],
+                [sg.HorizontalSeparator()],
+                [sg.Checkbox('自动比较', default=settings['auto_compare'], key='-AUTO_COMPARE-', font=text_font)],
+                [sg.Text('自动比较间隔 (小时)', font=text_font), sg.InputText(str(settings['compare_interval']), size=(5, 1), key='-INTERVAL-', font=text_font)],
+                [sg.HorizontalSeparator()],
+                [sg.Text('偏移 (mm):', font=text_font), sg.Text('(x, y)', key='-OFFSET-', font=text_font)],
+                [sg.HorizontalSeparator()],
+                [sg.Text('曝光 (us)', font=text_font), sg.InputText(str(settings['exposure']), size=(10, 1), key='-EXPOSURE-', font=text_font)],
+                [sg.HorizontalSeparator()],
+                [sg.Button('应用设置', key='-APPLY-', font=button_font), sg.Button('还原设置', key='-RESET-', font=button_font)]
+            ], vertical_alignment='top')
+        ]
     ]
-]
 
-# Create the Window
-window = sg.Window('标靶位移检测', layout)
-# Event Loop
-while True:
-    event, values = window.read(timeout=10)
-    if event == sg.WIN_CLOSED:
-        break
+    # Create the Window
+    window = sg.Window('标靶位移检测', layout)
 
-    if event == '-GET_BASE_IMAGE-':
-        # Handle Get Base Image button event
+    # Event Loop
+    while True:
+        event, values = window.read(timeout=10)
+        if event == sg.WIN_CLOSED:
+            break
 
-        # Show a loading pop-up while the task is running
-        loading_window = sg.Window('Loading', [[sg.Text('Loading, please wait...')]], modal=True)
-        
-        threading.Thread(target=get_image, args=(loading_window,"base_image.bmp"), daemon=True).start()
-        # Show loading window while the task is running
-        while True:
-            event, values = loading_window.read(timeout=100)  # Polling interval
-            if event in (sg.WIN_CLOSED, '-TASK_DONE-'):
-                break
+        if event == '-GET_BASE_IMAGE-':
+            # Handle Get Base Image button event
 
-        # Close loading pop-up after the task is done
-        loading_window.close()
+            # Show a loading pop-up while the task is running
+            loading_window = sg.Window('Loading', [[sg.Text('Loading, please wait...')]], modal=True)
+            
+            threading.Thread(target=get_image, args=(loading_window,"base_image.bmp"), daemon=True).start()
+            # Show loading window while the task is running
+            while True:
+                event, values = loading_window.read(timeout=100)  # Polling interval
+                if event in (sg.WIN_CLOSED, '-TASK_DONE-'):
+                    break
 
-
-    if settings['auto_compare'] and next_comparison_time is not None:
-        if time.time() >= next_comparison_time:
-            auto_compare_op()
-            next_comparison_time = time.time() + settings['compare_interval'] * 3600
+            # Close loading pop-up after the task is done
+            loading_window.close()
 
 
-    if event == '-MANUAL_COMPARE-':
-        # Perform manual comparison and update offset display
-        if not os.path.exists("base_image.bmp"):
-            sg.popup('请先获取基准图像')
-            continue
-        # Show a loading pop-up while the task is running
-        loading_window = sg.Window('Loading', [[sg.Text('Loading, please wait...')]], modal=True)
-        
-        threading.Thread(target=get_image, args=(loading_window,"target_image.bmp"), daemon=True).start()
-        # Show loading window while the task is running
-        while True:
-            event, values = loading_window.read(timeout=100)  # Polling interval
-            if event in (sg.WIN_CLOSED, '-TASK_DONE-'):
-                break
-
-        # Close loading pop-up after the task is done
-        loading_window.close()
-
-        x_offset, y_offset = perform_manual_comparison()
-        window['-OFFSET-'].update(f'({x_offset}, {y_offset})')
-
-    if event == '-APPLY-':
-        # Save the settings to the global dictionary
-        window_apply_op(values)
+        if settings['auto_compare'] and next_comparison_time is not None:
+            if time.time() >= next_comparison_time:
+                auto_compare_op()
+                next_comparison_time = time.time() + settings['compare_interval'] * 3600
 
 
-    if event == '-RESET-':
-        # Reset the settings to the default values
-        window_reset_op()
+        if event == '-MANUAL_COMPARE-':
+            # Perform manual comparison and update offset display
+            if not os.path.exists("base_image.bmp"):
+                sg.popup('请先获取基准图像')
+                continue
+            # Show a loading pop-up while the task is running
+            loading_window = sg.Window('Loading', [[sg.Text('Loading, please wait...')]], modal=True)
+            
+            threading.Thread(target=get_image, args=(loading_window,"target_image.bmp"), daemon=True).start()
+            # Show loading window while the task is running
+            while True:
+                event, values = loading_window.read(timeout=100)  # Polling interval
+                if event in (sg.WIN_CLOSED, '-TASK_DONE-'):
+                    break
 
-    # Additional event handling logic here if needed
+            # Close loading pop-up after the task is done
+            loading_window.close()
 
-window.close()
+            x_offset, y_offset = perform_manual_comparison()
+            window['-OFFSET-'].update(f'({x_offset}, {y_offset})')
+
+        if event == '-APPLY-':
+            # Save the settings to the global dictionary
+            window_apply_op(values)
+
+
+        if event == '-RESET-':
+            # Reset the settings to the default values
+            window_reset_op()
+
+        # Additional event handling logic here if needed
+
+    window.close()
