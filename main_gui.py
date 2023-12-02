@@ -89,7 +89,7 @@ def perform_manual_comparison(use_mmpp: bool = True):
         return x, y, mmpp
 
 
-def get_image(loading_window, save_file, nPhoto=20):
+def get_image(save_file, nPhoto=20, use_gui: bool = False, loading_window: any = None):
     global previewFrame, marker_ellipse, marker_rect
     cam.nSaveNum = nPhoto
     cam.bSaveBmp = True
@@ -102,14 +102,15 @@ def get_image(loading_window, save_file, nPhoto=20):
     fused_base_image = avgpixel.average_image_gray(base_image_array)
     print (fused_base_image.shape)
     if save_file.endswith("base_image.bmp"):
-        marker_ellipse, marker_rect = tsfit.find_marker(fused_base_image, marker_img)
+        marker_ellipse, marker_rect = tsfit.find_marker(fused_base_image)
     cv2.imwrite(save_file, fused_base_image)
     frm_ = fused_base_image[marker_rect[1]:marker_rect[1]+marker_rect[3],
                             marker_rect[0]:marker_rect[0]+marker_rect[2]]
-    previewFrame = cv2.resize(frm_, (PV_W, PV_H))
-    window['-IMAGE-'].update(data=convert_to_bytes(previewFrame))
     cam.clear_saved_files()
-    loading_window.write_event_value('-TASK_DONE-', '')  # Notify the main thread when done
+    if use_gui:
+        previewFrame = cv2.resize(frm_, (PV_W, PV_H))
+        window['-IMAGE-'].update(data=convert_to_bytes(previewFrame))
+        loading_window.write_event_value('-TASK_DONE-', '')  # Notify the main thread when done
 
 
 def window_apply_op(values):
@@ -144,7 +145,7 @@ def auto_compare_op():
     # Show a loading pop-up while the task is running
     loading_window = sg.Window('Loading', [[sg.Text('Loading, please wait...')]], modal=True)
     
-    threading.Thread(target=get_image, args=(loading_window,"target_image.bmp"), daemon=True).start()
+    threading.Thread(target=get_image, kwargs=dict(save_file="target_image.bmp", nPhoto=20, use_gui=True, loading_window=loading_window), daemon=True).start()
     # Show loading window while the task is running
     while True:
         event, values = loading_window.read(timeout=100)  # Polling interval
@@ -201,7 +202,7 @@ if __name__ == '__main__'
             # Show a loading pop-up while the task is running
             loading_window = sg.Window('Loading', [[sg.Text('Loading, please wait...')]], modal=True)
             
-            threading.Thread(target=get_image, args=(loading_window,"base_image.bmp"), daemon=True).start()
+            threading.Thread(target=get_image, kwargs=dict(save_file="base_image.bmp", nPhoto=20, use_gui=True, loading_window=loading_window), daemon=True).start()
             # Show loading window while the task is running
             while True:
                 event, values = loading_window.read(timeout=100)  # Polling interval
@@ -226,7 +227,7 @@ if __name__ == '__main__'
             # Show a loading pop-up while the task is running
             loading_window = sg.Window('Loading', [[sg.Text('Loading, please wait...')]], modal=True)
             
-            threading.Thread(target=get_image, args=(loading_window,"target_image.bmp"), daemon=True).start()
+            threading.Thread(target=get_image, kwargs=dict(save_file="target_image.bmp", nPhoto=20, use_gui=True, loading_window=loading_window), daemon=True).start()
             # Show loading window while the task is running
             while True:
                 event, values = loading_window.read(timeout=100)  # Polling interval
