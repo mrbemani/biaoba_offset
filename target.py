@@ -18,7 +18,7 @@ def enhance_contrast(img):
 
     return binary_img
 
-def calculate_movement(img1, img2, feature_params, lk_params):
+def calculate_movement(img1, img2, feature_params, lk_params, subpix_criteria_esp=0.001, subpix_criteria_count=60, subpix_winSize=15):
 
     # 确保图片加载成功
     if img1 is None or img2 is None:
@@ -42,11 +42,11 @@ def calculate_movement(img1, img2, feature_params, lk_params):
     p0 = cv2.goodFeaturesToTrack(gray1, mask=None, **feature_params)
 
     # 参数设置用于亚像素角点精化
-    subpix_criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 60, 0.001)
-    winSize = (15, 15)
+    subpix_criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, subpix_criteria_count, subpix_criteria_esp)
+    winSize_ = (subpix_winSize, subpix_winSize)
 
     # 对特征点进行亚像素级精化
-    cv2.cornerSubPix(gray1, p0, winSize, (-1, -1), subpix_criteria)
+    cv2.cornerSubPix(gray1, p0, winSize_, (-1, -1), subpix_criteria)
     # 使用Lucas-Kanade算法在第二张图像上追踪这些点
     p1, st, err = cv2.calcOpticalFlowPyrLK(gray1, gray2, p0, None, **lk_params)
 
@@ -75,13 +75,27 @@ def calculate_trimmed_mean(distances):
         # 如果数据点太少，无法去除最大和最小值
         return np.mean(distances)
 
-def perform_compare(img1, img2):
+def calculate_gaussian_weights(movements):
+    # 计算每个移动向量的欧几里得距离
+    distances = np.sqrt((movements[:, 0] ** 2) + (movements[:, 1] ** 2))
+    # 计算每个移动向量在 x 轴方向的移动距离
+    #distances = np.abs(movements[:, 0])
+    # 计算每个移动向量的权重
+    weights = np.exp(-distances ** 2 / (2 * 10 ** 2))
+    return weights
+
+def perform_compare(img1, img2, winSize=11, maxLevel=40, criteria_esp=0.001, criteria_count=200, 
+                    maxCorners=64, qualityLevel=0.9, minDistance=3, blockSize=11, 
+                    subpixel_criteria_esp=0.001, subpixel_criteria_count=60, subpix_winSize=15):
     # 参数设置
-    feature_params = dict(maxCorners=200, qualityLevel=0.9, minDistance=3, blockSize=11)
-    lk_params = dict(winSize=(35, 35), maxLevel=40, criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 1000, 0.0003))
+    feature_params = dict(maxCorners=maxCorners, qualityLevel=qualityLevel, minDistance=minDistance, blockSize=blockSize)
+    lk_params = dict(winSize=(winSize, winSize), maxLevel=maxLevel, criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, criteria_count, criteria_esp))
 
     # 运行光流算法
-    movements = calculate_movement(img1, img2, feature_params, lk_params)
+    movements = calculate_movement(img1, img2, feature_params, lk_params, 
+                                   subpix_criteria_esp=subpixel_criteria_esp, 
+                                   subpix_criteria_count=subpixel_criteria_count, 
+                                   subpix_winSize=subpix_winSize)
 
     # 计算每个特征点的移动距离
     #distances = calculate_distance(movements)
@@ -92,9 +106,13 @@ def perform_compare(img1, img2):
         #print(f"Feature Point Movement Distance: {distance}")
         #total_distance += distance
 
+    # average_distance = np.mean(movements, axis=0)
+
     # 计算平均移动距离
     #average_distance = calculate_trimmed_mean(distances)
-    average_distance = np.mean(movements, axis=0)
+    # guassian weighted average of the movements
+    average_distance = np.average(movements, axis=0, weights=calculate_gaussian_weights(movements))
+    
     return average_distance
 
 

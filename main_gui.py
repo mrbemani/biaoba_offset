@@ -12,7 +12,7 @@ import numpy as np
 import cam
 import avgpixel
 import target as tg
-import tsfit
+import tsutil as tsu
 
 __author__ = 'Mr.Bemani'
 
@@ -73,7 +73,7 @@ def perform_manual_comparison(use_mmpp: bool = True):
         sg.popup('基准图像加载失败')
         return
     if marker_ellipse is None:
-        marker_ellipse, marker_rect = tsfit.find_marker(img1)
+        marker_ellipse, marker_rect = tsu.find_marker(img1)
     img2 = cv2.imread("target_image.bmp", cv2.IMREAD_GRAYSCALE)
     if img2 is None:
         sg.popup('目标图像加载失败')
@@ -84,7 +84,7 @@ def perform_manual_comparison(use_mmpp: bool = True):
     img2 = img2[marker_rect[1]:marker_rect[1]+marker_rect[3], marker_rect[0]:marker_rect[0]+marker_rect[2]]
     x, y = tg.perform_compare(img1, img2)
     if use_mmpp:
-        return x/mmpp, y/mmpp  # Example offset values
+        return x*mmpp, y*mmpp  # Example offset values
     else:
         return x, y, mmpp
 
@@ -102,7 +102,7 @@ def get_image(save_file, nPhoto=20, use_gui: bool = False, loading_window: any =
     fused_base_image = avgpixel.average_image_gray(base_image_array)
     print (fused_base_image.shape)
     if save_file.endswith("base_image.bmp"):
-        marker_ellipse, marker_rect = tsfit.find_marker(fused_base_image)
+        marker_ellipse, marker_rect = tsu.find_marker(fused_base_image)
     cv2.imwrite(save_file, fused_base_image)
     frm_ = fused_base_image[marker_rect[1]:marker_rect[1]+marker_rect[3],
                             marker_rect[0]:marker_rect[0]+marker_rect[2]]
@@ -111,6 +111,7 @@ def get_image(save_file, nPhoto=20, use_gui: bool = False, loading_window: any =
         previewFrame = cv2.resize(frm_, (PV_W, PV_H))
         window['-IMAGE-'].update(data=convert_to_bytes(previewFrame))
         loading_window.write_event_value('-TASK_DONE-', '')  # Notify the main thread when done
+    return marker_ellipse, marker_rect, frm_
 
 
 def window_apply_op(values):
@@ -165,7 +166,7 @@ previewFrame = np.zeros((PV_W, PV_H, 1), dtype=np.uint8)  # Black square
 image_bytes = convert_to_bytes(cv2.cvtColor(previewFrame, cv2.COLOR_BGR2RGB))
 
 
-if __name__ == '__main__'
+if __name__ == '__main__':
     # Define the layout for the GUI
     layout = [
         [
