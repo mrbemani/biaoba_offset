@@ -8,8 +8,8 @@ def resize_image(image, max_size=(1200, 900)):
     new_w, new_h = int(w * scale), int(h * scale)
     return cv2.resize(image, (new_w, new_h)), scale
 
-def draw_boxes(window, image, scale):
-    boxes = []
+def draw_boxes(window, image, scale, boxes=[]):
+    boxes = boxes
     drawing = False  # True if drawing a new box
     moving = False   # True if moving an existing box
     ix, iy = -1, -1  # Initial x, y coordinates
@@ -80,25 +80,19 @@ def draw_boxes(window, image, scale):
     cv2.destroyAllWindows()
     return [(int(x1/scale), int(y1/scale), int(x2/scale), int(y2/scale), name) for (x1, y1, x2, y2, name) in boxes]
 
-# GUI Layout with a right sidebar for buttons
-image_viewer_column = [
-    [sg.Image(key='-IMAGE-')]
-]
-
 button_column = [
-    [sg.Button('Load Image')],
-    [sg.Button('Draw Boxes')],
-    [sg.Button('Save Boxes')],
-    [sg.Button('Exit')]
+    [sg.Button('Load Image'), 
+     sg.Button('Draw Boxes'),
+     sg.Button('Save Boxes'),
+     sg.Button('Exit')]
 ]
 
 layout = [
-    [sg.Column(image_viewer_column),
-     sg.VSeperator(),
-     sg.Column(button_column, element_justification='center')]
+    [sg.Column(button_column, element_justification='center')]
 ]
 
 window = sg.Window('Box Drawer', layout)
+boxes = []
 
 while True:
     event, values = window.read()
@@ -109,13 +103,17 @@ while True:
         if filename:
             image = cv2.imread(filename)
             resized_image, scale = resize_image(image)
-            window['-IMAGE-'].update(data=cv2.imencode('.png', resized_image)[1].tobytes())
+            if 'image' in locals():
+                boxes = draw_boxes(window, resized_image, scale, boxes)
     elif event == 'Draw Boxes':
         if 'image' in locals():
-            boxes = draw_boxes(window, image, scale)
+            boxes = draw_boxes(window, resized_image, scale, boxes)
     elif event == 'Save Boxes':
         if 'boxes' in locals():
+            # Adjust the box coordinates according to the original image scale before saving
+            original_boxes = [(int(x1/scale), int(y1/scale), int(x2/scale), int(y2/scale), name) 
+                              for (x1, y1, x2, y2, name) in boxes]
             with open('boxes.json', 'w') as f:
-                json.dump(boxes, f)
+                json.dump(original_boxes, f)
 
 window.close()

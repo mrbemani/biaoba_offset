@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Image Box Drawer</title>
+    <!-- Include Bulma CSS -->
+    <link rel="stylesheet" href="/css/bulma.min.css">
+    <!-- Include your custom CSS -->
+    <link rel="stylesheet" href="/css/drawbox.css">
+</head>
+<body>
+    <div id="toolbar" class="field is-grouped">
+        <div class="file">
+            <label class="file-label">
+                <input class="file-input" type="file" id="imageLoader" name="imageLoader">
+                <span class="file-cta">
+                    <span class="file-label">
+                        加载图片…
+                    </span>
+                </span>
+            </label>
+        </div>
+        <div class="control">&nbsp;</div>
+        <div class="control">
+            <button id="modeToggle" class="button">选择模式</button>
+        </div>             
+        <div class="control">
+            <button class="button is-danger" disabled id="deleteBox">删除画框</button>
+        </div>
+        <div class="control">
+            <button class="button is-primary" id="saveBoxes">保存</button>
+        </div>
+        <div class="control">
+            <button class="button is-info" id="cancelBoxes">取消</button>
+        </div>
+    </div>
+
+    <div id="attributeForm" class="sidebar" style="display: none;">
+        <div class="field">
+            <label class="label">标靶名称</label>
+            <div class="control">
+                <input class="input" type="text" id="markerName" placeholder="Enter Box Name">
+            </div>
+        </div>
+    
+        <div class="field">
+            <label class="label">标靶直径</label>
+            <div class="control">
+                <input class="input" type="text" id="markerDiameter" placeholder="标靶直径 (mm)">
+            </div>
+        </div>
+    
+        <div class="field">
+            <div class="control">
+                <button class="button is-info" id="saveAttributes">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="imageCanvas" width="800" height="600"></canvas>
+
+    <!-- Include Fabric.js -->
+    <script src="/js/fabric.min.js"></script>
+    <!-- Include your custom JavaScript -->
+    <script src="/js/drawbox.js"></script>
+</body>
+</html>
