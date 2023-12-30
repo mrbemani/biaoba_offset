@@ -18,6 +18,20 @@ def send_js(path):
 def send_css(path):
     return send_from_directory('css', path)
 
+
+@app.route('/camera-calibration', methods=['GET'])
+def camera_calibration():
+    camera_id = request.args.get('camera_id')
+    return render_template('camera_calibration.tpl.html', camera_id=camera_id)
+
+
+@app.route('/save-camera-calibration', methods=['POST'])
+def save_camera_calibration():
+    calibration_data = request.json
+    # Save calibration data to a file or process as needed
+    return jsonify({"success": True})
+
+
 @app.route('/draw-boxes', methods=['GET'])
 def draw_boxes():
     camera_id = request.args.get('camera_id')
