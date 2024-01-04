@@ -7,6 +7,7 @@ __pycache__
 test/
 cam/
 doc/*.pdf
+doc/*.html
 tmp/
 .env
 *.dwg
