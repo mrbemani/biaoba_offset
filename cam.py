@@ -2,15 +2,35 @@
 
 import sys
 import os
+
+os_type = sys.platform
 import threading
-import msvcrt
+
+if os_type == 'win32':
+    import msvcrt
+else:
+    import termios
+    import tty
+
 import cv2
 import numpy as np
 import time
 
-from ctypes import *
 
-sys.path.append("./MvImport")
+
+from ctypes import *
+if os_type == 'linux':
+    libc = cdll.LoadLibrary("libc.so.6")
+elif os_type == 'darwin':
+    libc = cdll.LoadLibrary("libc.dylib")
+
+MvImport = "./MvImport_win"
+if os_type == 'linux':
+    MvImport = "./MvImport_linux"
+elif os_type == 'darwin':
+    MvImport = "/Library/MVS_SDK/Samples/Python/MvImport"
+
+sys.path.append(MvImport)
 from MvCameraControl_class import *
 from CamOperation_class import CameraOperation
 
@@ -59,14 +79,20 @@ def work_thread(cam=0):
                 elif stOutFrame.stFrameInfo.enPixelType == PixelType_Gvsp_Mono12:
                     buf_image = (c_uint16 * frame_len)()
                 g_rclock.acquire()
-                cdll.msvcrt.memcpy(byref(buf_image), stOutFrame.pBufAddr, frame_len)
+                if os_type == 'win32':
+                    cdll.msvcrt.memcpy(byref(buf_image), stOutFrame.pBufAddr, frame_len)
+                else:
+                    libc.memcpy(byref(buf_image), stOutFrame.pBufAddr, frame_len)
                 Save_Bmp(cam, buf_image, stOutFrame.stFrameInfo, False)
                 if len(savedFiles) > 0:
                     print (savedFiles[-1])
                 g_rclock.release()
             nRet = cam.MV_CC_FreeImageBuffer(stOutFrame)
             if buf_image is not None:
-                del buf_image
+                if os_type == 'win32':
+                    del buf_image
+                else:
+                    libc.free(buf_image)
         else:
             print ("no data[0x%x]" % ret)
         if g_bExit == True:

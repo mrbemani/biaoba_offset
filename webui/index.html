@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>隧道偏移监测</title>
+    <link rel="stylesheet" href="assets/js/layui/css/layui.css" />
+    <link rel="stylesheet" href="assets/css/main.css" />
+  </head>
+  <body>
+    <div id="app" v-scope>
+      <div class="left__side__box">
+        <div class="photo__box">
+          <img :src="data.imgurl" id="selectedImg" />
+        </div>
+        <canvas id="canvas" width="798" height="598"></canvas>
+
+        <div class="left__bottom">
+          <div class="logs__view">
+            <div class="logs__title">日志</div>
+            <ul class="logs__list" id="logsList"></ul>
+          </div>
+          <div class="tools">
+            <div class="layui-form" lay-filter="formCameraList">
+              <div class="layui-form-item camera__list">
+                <div class="layui-input-block">
+                  <select name="cameraList" id="cameraList" lay-filter="cameraList">
+                    <option value="" selected>选择相机</option>
+                    <option v-for="camera in data.cameras" :value="camera.id">{{camera.name}}</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="right__side__box">
+        <!-- tab 1 -->
+        <div class="layui-tab layui-tab-card tab-n1" lay-filter="tabN1">
+          <ul class="layui-tab-title">
+            <li class="layui-this" lay-id="calibrate">相机标定</li>
+            <li lay-id="setCamera">相机设置</li>
+            <li lay-id="setMarker">标靶设置</li>
+          </ul>
+          <div class="layui-tab-content">
+            <!-- 相机标定表单 -->
+            <div class="layui-tab-item layui-show">
+              <form class="layui-form" action="" lay-filter="formCalibrate">
+                <div class="layui-form-item">
+                  <label class="layui-form-label">棋盘格宽度</label>
+                  <div class="layui-input-block">
+                    <input
+                      type="number"
+                      name="width"
+                      required
+                      lay-verify="required"
+                      placeholder="请输入宽度"
+                      autocomplete="off"
+                      class="layui-input"
+                    />
+                  </div>
+                </div>
+                <div class="layui-form-item">
+                  <label class="layui-form-label">棋盘格高度</label>
+                  <div class="layui-input-block">
+                    <input
+                      type="number"
+                      name="height"
+                      required
+                      lay-verify="required"
+                      placeholder="请输入高度"
+                      autocomplete="off"
+                      class="layui-input"
+                    />
+                  </div>
+                </div>
+                <div class="layui-form-item">
+                  <label class="layui-form-label">棋盘格尺寸</label>
+                  <div class="layui-input-inline">
+                    <input
+                      type="number"
+                      name="size"
+                      required
+                      lay-verify="required"
+                      placeholder="请输入尺寸"
+                      autocomplete="off"
+                      class="layui-input"
+                    />
+                  </div>
+                  <div class="layui-form-mid layui-word-aux">(m)</div>
+                </div>
+                <div class="layui-form-item layui-form-btns">
+                  <div class="layui-input-block">
+                    <button class="layui-btn layui-btn-normal" lay-submit lay-filter="formCalibrate">立即提交</button>
+                    <button type="reset" class="layui-btn layui-btn-reset">重置</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+            <!-- 相机设置表单 -->
+            <div class="layui-tab-item">
+              <form class="layui-form row_2" action="" lay-filter="formSetCamera">
+                <div class="layui-form-item">
+                  <label class="layui-form-label">相机编号</label>
+                  <div class="layui-input-block">
+                    <input
+                      type="text"
+                      name="id"
+                      v-model="data.currentCamera.id"
+                      required
+                      lay-verify="required"
+                      placeholder="请输入相机编号"
+                      autocomplete="off"
+                      class="layui-input"
+                    />
+                  </div>
+                </div>
+                <div class="layui-form-item">
+                  <label class="layui-form-label">相机名称</label>
+                  <div class="layui-input-block">
+                    <input
+                      type="text"
+                      name="name"
+                      v-model="data.currentCamera.name"
+                      required
+                      lay-verify="required"
+                      placeholder="请输入相机名称"
+                      autocomplete="off"
+                      class="layui-input"
+                    />
+                  </div>
+                </div>
+                <div class="layui-form-item">
+                  <label class="layui-form-label">安装位置</label>
+                  <div class="layui-input-block">
+                    <input
+                      type="text"
+                      name="position"
+                      v-model="data.currentCamera.ip"
+                      required
+                      lay-verify="required"
+                      placeholder="请输入安装位置"
+                      autocomplete="off"
+                      class="layui-input"
+                    />
+                  </div>
+                </div>
+                <div class="layui-form-item">
+                  <label class="layui-form-label">基准相机</label>
+                  <div class="layui-input-block">
+                    <input type="radio" name="standard" value="是" title="是" />
+                    <input type="radio" name="standard" value="否" title="否" checked />
+                  </div>
+                </div>
+                <div class="layui-form-item">
+                  <label class="layui-form-label">检测算法</label>
+                  <div class="layui-input-block">
+                    <select name="algorithm" lay-verify="required">
+                      <option value="elliptic">算法一 (elliptic)</option>
+                      <option value="optical-flow">算法二 (optical-flow)</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="layui-form-item">
+                  <label class="layui-form-label">采集方式</label>
+                  <div class="layui-input-block">
+                    <input type="radio" name="capture" value="手动" title="手动" checked />
+                    <input type="radio" name="capture" value="自动" title="自动" />
+                  </div>
+                </div>
+                <!-- 其它参数：通过相机信息自动填写 -->
+                <div class="others">
+                  <div class="layui-form-item">
+                    <label class="layui-form-label">采集频率</label>
+                    <div class="layui-input-block">
+                      <input
+                        type="text"
+                        name="frequency"
+                        required
+                        lay-verify="required"
+                        placeholder="请输入采集频率"
+                        autocomplete="off"
+                        class="layui-input"
+                      />
+                    </div>
+                  </div>
+                  <div class="layui-form-item">
+                    <label class="layui-form-label">采样数量</label>
+                    <div class="layui-input-block">
+                      <input
+                        type="text"
+                        name="sampleNumber"
+                        required
+                        lay-verify="required"
+                        placeholder="请输入采样数量"
+                        autocomplete="off"
+                        class="layui-input"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div class="others">
+                  <div class="layui-form-item">
+                    <label class="layui-form-label">竖向俯仰角</label>
+                    <div class="layui-input-block">
+                      <input
+                        type="text"
+                        name="pitch"
+                        v-model="data.cameraInfo.settings.pitch"
+                        required
+                        lay-verify="required"
+                        placeholder="请输入竖向俯仰角"
+                        autocomplete="off"
+                        class="layui-input"
+                      />
+                    </div>
+                  </div>
+                  <div class="layui-form-item">
+                    <label class="layui-form-label">水平旋转角</label>
+                    <div class="layui-input-block">
+                      <input
+                        type="text"
+                        name="roll"
+                        v-model="data.cameraInfo.settings.roll"
+                        required
+                        lay-verify="required"
+                        placeholder="请输入水平旋转角"
+                        autocomplete="off"
+                        class="layui-input"
+                      />
+                    </div>
+                  </div>
+                  <div class="layui-form-item">
+                    <label class="layui-form-label">水平倾斜角</label>
+                    <div class="layui-input-block">
+                      <input
+                        type="text"
+                        name="yaw"
+                        v-model="data.cameraInfo.settings.yaw"
+                        required
+                        lay-verify="required"
+                        placeholder="请输入水平倾斜角"
+                        autocomplete="off"
+                        class="layui-input"
+                      />
+                    </div>
+                  </div>
+                  <div class="layui-form-item">
+                    <label class="layui-form-label">曝光时间</label>
+                    <div class="layui-input-block">
+                      <input
+                        type="text"
+                        name="exposure"
+                        v-model="data.cameraInfo.settings.exposure"
+                        required
+                        lay-verify="required"
+                        placeholder="请输入水平倾斜角"
+                        autocomplete="off"
+                        class="layui-input"
+                      />
+                    </div>
+                  </div>
+                  <div class="layui-form-item">
+                    <label class="layui-form-label">增益</label>
+                    <div class="layui-input-block">
+                      <input
+                        type="text"
+                        name="gain"
+                        v-model="data.cameraInfo.settings.gain"
+                        required
+                        lay-verify="required"
+                        placeholder="请输入水平倾斜角"
+                        autocomplete="off"
+                        class="layui-input"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="layui-form-item layui-form-btns">
+                  <div class="layui-input-block">
+                    <button class="layui-btn layui-btn-normal" lay-submit lay-filter="formSubmitCameraSet">立即提交</button>
+                    <button type="reset" class="layui-btn layui-btn-reset">重置</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+            <!-- 标靶设置表单 -->
+            <div class="layui-tab-item">
+              <form class="layui-form row_2" action="" lay-filter="formSetMarker">
+                <div class="layui-form-item">
+                  <label class="layui-form-label">标靶 ID</label>
+                  <div class="layui-input-block">
+                    <input
+                      type="text"
+                      name="id"
+                      required
+                      lay-verify="required"
+                      placeholder="请输入标靶ID"
+                      autocomplete="off"
+                      class="layui-input"
+                    />
+                  </div>
+                </div>
+                <div class="layui-form-item">
+                  <label class="layui-form-label">标靶名称</label>
+                  <div class="layui-input-block">
+                    <input
+                      type="text"
+                      name="name"
+                      required
+                      lay-verify="required"
+                      placeholder="请输入标靶名称"
+                      autocomplete="off"
+                      class="layui-input"
+                    />
+                  </div>
+                </div>
+                <div class="layui-form-item">
+                  <label class="layui-form-label">标靶类型</label>
+                  <div class="layui-input-block">
+                    <input
+                      type="text"
+                      name="type"
+                      required
+                      lay-verify="required"
+                      placeholder="请输入标靶类型"
+                      autocomplete="off"
+                      class="layui-input"
+                    />
+                  </div>
+                </div>
+                <div class="layui-form-item">
+                  <label class="layui-form-label">标靶尺寸</label>
+                  <div class="layui-input-block">
+                    <input
+                      type="text"
+                      name="size"
+                      required
+                      lay-verify="required"
+                      placeholder="请输入标靶尺寸"
+                      autocomplete="off"
+                      class="layui-input"
+                    />
+                  </div>
+                </div>
+                <div class="layui-form-item">
+                  <label class="layui-form-label">标靶 ROI</label>
+                  <div class="layui-input-block">
+                    <input
+                      type="text"
+                      name="roi"
+                      required
+                      lay-verify="required"
+                      placeholder="left, top, width, height"
+                      autocomplete="off"
+                      class="layui-input"
+                    />
+                  </div>
+                </div>
+                <div class="layui-form-item">
+                  <label class="layui-form-label">标靶位置</label>
+                  <div class="layui-input-block">
+                    <input
+                      type="text"
+                      name="position"
+                      required
+                      lay-verify="required"
+                      placeholder="请输入标靶位置"
+                      autocomplete="off"
+                      class="layui-input"
+                    />
+                  </div>
+                </div>
+                <div class="layui-form-item">
+                  <label class="layui-form-label">标靶旋转</label>
+                  <div class="layui-input-block">
+                    <input
+                      type="text"
+                      name="rotation"
+                      required
+                      lay-verify="required"
+                      placeholder="请输入标靶旋转"
+                      autocomplete="off"
+                      class="layui-input"
+                    />
+                  </div>
+                </div>
+                <div class="layui-form-item layui-form-btns">
+                  <div class="layui-input-block">
+                    <button class="layui-btn layui-btn-success" lay-submit lay-filter="formSaveMarker">保 存</button>
+                    <button class="layui-btn layui-btn-normal" lay-submit lay-filter="formSubmitMarkers">立即提交</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- tab 2 -->
+        <div class="layui-tab layui-tab-card tab-n2" lay-filter="tabN2">
+          <ul class="layui-tab-title">
+            <li class="layui-this" lay-id="detectExec">检测执行</li>
+            <li lay-id="upload">数据上传</li>
+          </ul>
+          <div class="layui-tab-content">
+            <div class="layui-tab-item layui-show">
+              <button class="layui-btn layui-btn-normal" lay-submit lay-filter="initialize" @click="data.captureReferenceImage">
+                初始化
+              </button>
+              <button class="layui-btn layui-btn-success" lay-submit lay-filter="start" @click="data.setIntervalCheck">开 始</button>
+              <button class="layui-btn layui-btn-warm" lay-submit lay-filter="stop" @click="data.cancelIntervalCheck">暂 停</button>
+            </div>
+            <div class="layui-tab-item">
+              <form class="layui-form form-upload" action="" lay-filter="formUpload">
+                <div class="layui-form-item">
+                  <label class="layui-form-label">数据预处理方法</label>
+                  <div class="layui-input-block">
+                    <select name="pretreat" lay-verify="required">
+                      <option value="0">默认/自定义</option>
+                      <option value="1">预处理方法一</option>
+                      <option value="2">预处理方法二</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="layui-form-item">
+                  <label class="layui-form-label">采集设备编号</label>
+                  <div class="layui-input-block">
+                    <input
+                      type="text"
+                      name="serial"
+                      required
+                      lay-verify="required"
+                      placeholder="请输入采集设备编号"
+                      autocomplete="off"
+                      class="layui-input"
+                    />
+                  </div>
+                </div>
+                <div class="layui-form-item">
+                  <label class="layui-form-label">服务器地址一</label>
+                  <div class="layui-input-block">
+                    <input
+                      type="text"
+                      name="server1"
+                      required
+                      lay-verify="required"
+                      placeholder="请输入尺寸"
+                      autocomplete="off"
+                      class="layui-input"
+                    />
+                  </div>
+                </div>
+                <div class="layui-form-item">
+                  <label class="layui-form-label">服务器地址二</label>
+                  <div class="layui-input-block">
+                    <input
+                      type="text"
+                      name="server2"
+                      required
+                      lay-verify="required"
+                      placeholder="请输入尺寸"
+                      autocomplete="off"
+                      class="layui-input"
+                    />
+                  </div>
+                </div>
+                <div class="layui-form-item layui-form-btns">
+                  <div class="layui-input-block">
+                    <button class="layui-btn layui-btn-normal" lay-submit lay-filter="formUploadServer">上 传</button>
+                    <button type="reset" class="layui-btn layui-btn-reset">重置</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- tab 3 -->
+        <div class="layui-tab layui-tab-card tab-n3" lay-filter="tabN3">
+          <ul class="layui-tab-title">
+            <li class="layui-this" lay-id="detectExec">实时数据</li>
+          </ul>
+          <div class="layui-tab-content">
+            <div class="layui-tab-item layui-show">
+              <dl id="realtimeDataList" class="realtime__data__list">暂无实时数据...</dl>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="layerInit" style="display: none">
+      <form class="layui-form form-init" action="" lay-filter="formInitConfig">
+        <div class="layui-form-item">
+          <label class="layui-form-label">相机 ID</label>
+          <div class="layui-input-block">
+            <input
+              type="text"
+              name="id"
+              required
+              lay-verify="required"
+              placeholder="请输入相机 ID"
+              autocomplete="off"
+              class="layui-input"
+            />
+          </div>
+        </div>
+        <div class="layui-form-item">
+          <label class="layui-form-label">抓拍样本数</label>
+          <div class="layui-input-block">
+            <input
+              type="number"
+              name="sample"
+              required
+              lay-verify="required"
+              placeholder="请输入抓拍样本数"
+              autocomplete="off"
+              class="layui-input"
+            />
+          </div>
+        </div>
+        <div class="layui-form-item">
+          <label class="layui-form-label">保存路径</label>
+          <div class="layui-input-block">
+            <input type="text" name="save_path" placeholder="请输入保存路径" autocomplete="off" class="layui-input" />
+          </div>
+        </div>
+        <div class="layui-form-item layui-form-btns">
+          <div class="layui-input-block">
+            <button class="layui-btn layui-btn-normal" lay-submit lay-filter="formSubmitInit">确定</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <script src="assets/js/layui/layui.js"></script>
+    <!-- canvas 绘图程序 -->
+    <script src="assets/js/canvas.js"></script>
+    <script type="module">
+      import { createApp, reactive } from '/assets/js/petite-vue.es.js'
+      import { api } from '/assets/js/main.js'
+      import { store } from '/assets/js/store.js'
+
+      let form // layui 的 form 对象，渲染表单会用到
+      const data = reactive({
+        cameras: [], // 相机列表数据
+        currentCamera: {
+          // 当前相机数据
+          id: '',
+          name: '',
+          ip: ''
+        },
+        imgurl: '', // 相机画面图片地址
+        cameraInfo: {
+          settings: {
+            exposure: 0,
+            gain: 0,
+            pitch: 0,
+            roll: 0,
+            yaw: 0
+          }
+        }, // 相机参数信息
+        markers: [],
+        layFilterKeys: {
+          formCalibrate: '相机标定',
+          formSubmitCameraSet: '相机设置',
+          formSaveMarker: '保存标靶设置',
+          formSubmitMarkers: '提交标靶设置',
+          initialize: '检测执行【初始化】',
+          start: '检测执行【开始】',
+          stop: '检测执行【暂停】',
+          formUploadServer: '数据上传',
+          formSubmitInit: '确认检测执行【初始化】'
+        },
+
+        // 获取相机列表
+        getCameras() {
+          api
+            .get('/api/v1/camera/list') // 正式接口: /api/v1/camera/list
+            .then(res => {
+              if (res.status === 1) {
+                this.cameras = res.data.cameras
+                setTimeout(() => {
+                  form.render('select', 'formCameraList') // 更新 lay-filter="cameraList" 所在容器内的全部 select 状态
+                }, 0)
+              }
+            })
+            .catch(error => {
+              console.error(error)
+            })
+        },
+
+        // layui选项卡、表单操作（包括选择相机）
+        layuiOperate() {
+          const _this = this
+          layui.use(['element', 'form'], function () {
+            form = layui.form
+            var element = layui.element
+            form.on('submit', function (data) {
+              _this.addLog(data)
+            })
+
+            // 选项卡(tabN1)切换事件
+            element.on('tab(tabN1)', function (data) {
+              // 切换到【标靶设置】
+              if (data.index === 2) {
+                if (!selectedRectangle) return
+                const selectedRect = _this.markers.filter(marker => marker.id === selectedRectangle.id)
+
+                const selectedImgSize = document.querySelector('#selectedImg').getBoundingClientRect()
+                const w = selectedImgSize.width
+                const h = selectedImgSize.height
+                const roi =
+                  selectedRectangle.x / w +
+                  ', ' +
+                  selectedRectangle.y / h +
+                  ', ' +
+                  selectedRectangle.width / w +
+                  ', ' +
+                  selectedRectangle.height / h
+
+                if (selectedRect.length !== 0) {
+                  // 已设置标靶
+                  const rect = selectedRect[0]
+                  form.val('formSetMarker', {
+                    //formSetMarker 即 class="layui-form" 所在元素属性 lay-filter="" 对应的值
+                    id: rect.id,
+                    name: rect.name,
+                    type: rect.type,
+                    size: rect.size,
+                    roi: roi,
+                    position: rect.position,
+                    rotation: rect.rotation
+                  })
+                } else {
+                  // 新标靶
+                  form.val('formSetMarker', {
+                    //formSetMarker 即 class="layui-form" 所在元素属性 lay-filter="" 对应的值
+                    id: selectedRectangle.id,
+                    name: selectedRectangle.name,
+                    type: '',
+                    size: '',
+                    roi: roi,
+                    position: '',
+                    rotation: ''
+                  })
+                }
+              }
+            })
+
+            // 监听【相机标定】的提交
+            form.on('submit(formCalibrate)', function (data) {
+              api
+                .post('/api/v1/camera/calibrate', {
+                  id: _this.currentCamera.id, // 相机ID
+                  checkerboard: data.field, // 相机标定数据
+                  images: [
+                    'd:/temp/1.bmp', // 图片路径, 本地路径或URL
+                    'd:/temp/2.bmp',
+                    'd:/temp/3.bmp'
+                  ]
+                })
+                .then(res => {
+                  if (res.status === 1) {
+                    layer.msg('相机标定完成', { icon: 1 })
+                  }
+                })
+                .catch(err => {
+                  console.log(err)
+                })
+              return false
+            })
+
+            // 监听【相机设置】的提交
+            form.on('submit(formSubmitCameraSet)', function (data) {
+              console.log('currentCamera', _this.currentCamera)
+              const settings = _this.cameraInfo.settings
+              settings.name = data.field.name
+              api
+                .post('/api/v1/camera/set', {
+                  id: _this.currentCamera.id, // 相机ID
+                  set: settings
+                })
+                .then(res => {
+                  layer.msg('相机设置完成', { icon: 1 })
+                })
+                .catch(err => {
+                  console.log(err)
+                })
+              return false
+            })
+
+            // 监听【标靶设置】的保存
+            form.on('submit(formSaveMarker)', function (data) {
+              _this.saveMarkers(data.field, 'save')
+
+              return false
+            })
+
+            // 监听【标靶设置】的提交
+            form.on('submit(formSubmitMarkers)', function (data) {
+              _this.saveMarkers(data.field) // 先将 data 保存到 markers
+
+              api
+                .post(`/api/v1/camera/${_this.currentCamera.id}/set-markers`, {
+                  markers: _this.markers
+                })
+                .then(res => {
+                  if (res.status === 1) {
+                    layer.msg('已成功完成 ' + markers.length + ' 个标靶设置!')
+                  }
+                })
+                .catch(err => {
+                  console.log(err)
+                })
+              return false
+            })
+
+            // 监听【数据上传】的提交
+            form.on('submit(formUploadServer)', function (data) {
+              api
+                .post('/api/v1/remote-server/set', data.field)
+                .then(res => {
+                  if (res.status === 1) {
+                    layer.msg('数据上传成功！')
+                  }
+                })
+                .catch(err => {
+                  console.log(err)
+                })
+              return false
+            })
+
+            // 监听【初始化配置】的确定
+            form.on('submit(formSubmitInit)', function (data) {
+              layer.closeAll() // 关闭弹窗
+              api
+                .post('/api/v1/camera/capture-reference-image', data.field)
+                .then(res => {
+                  if (res.status === 1) {
+                    layer.msg('初始化成功！')
+                  }
+                })
+                .catch(err => {
+                  console.log(err)
+                })
+              return false
+            })
+
+            // 监听选中的【相机列表】
+            form.on('select(cameraList)', function (data) {
+              console.log('select(cameraList)', data)
+              // 重置当前相机信息
+              _this.currentCamera = {
+                id: '',
+                name: '',
+                ip: ''
+              }
+              const id = data.value.toString()
+              _this.cameras.forEach(camera => {
+                if (camera.id.toString() === id) {
+                  _this.currentCamera = camera
+                }
+              })
+              _this.getCameraFrame(id) // 获取相机画面
+              _this.getCameraInfo(id) // 获取相机详细信息
+              _this.getCameraMarkers(id) // 获取相机的标靶列表
+            })
+          })
+        },
+
+        // 保存当前表单数据到 markers
+        saveMarkers(data, isSave) {
+          const markers = this.markers
+          let index = -1
+          markers.forEach((marker, i) => {
+            if (marker.id === data.id) {
+              index = i
+            }
+          })
+          if (index !== -1) {
+            // 如果已经存在该 marker，替换之
+            markers.splice(index, 1, data)
+            if (isSave) {
+              layer.msg('标靶设置已修改！')
+            }
+          } else {
+            // 不存在，则推入
+            this.markers.push(data)
+            if (isSave) {
+              layer.msg('已成功添加一个标靶设置！总共 ' + markers.length + ' 个标靶设置。')
+            }
+          }
+        },
+
+        // 获取相机画面
+        getCameraFrame(id) {
+          const _this = this
+          if (id === 'null') {
+            _this.imgurl = ''
+          } else {
+            // Tips: 正式版调用以下接口
+            api
+              .get(`/assets/dataset/frame-url.json`) // 正式接口: /api/v1/camera/${id}/get-frame
+              .then(res => {
+                _this.imgurl = res.data.frameurl
+              })
+              .catch(error => {
+                console.error(errors)
+              })
+          }
+        },
+
+        // 获取相机详细信息
+        getCameraInfo(id) {
+          const _this = this
+          api
+            .get('/assets/dataset/camera-info.json') // 正式接口: /api/v1/camera/{ID}/get-info
+            .then(res => {
+              if (res.status === 1) {
+                _this.cameraInfo = res.data
+              }
+            })
+            .catch(error => {
+              console.error(error)
+            })
+        },
+
+        // 获取相机的标靶列表
+        getCameraMarkers(id) {
+          const _this = this
+          api
+            .get('/assets/dataset/markers.json') // 正式接口: /api/v1/camera/{ID}/list-markers
+            .then(res => {
+              if (res.status === 1) {
+                _this.markers = res.data.markers
+
+                const selectedImg = document.querySelector('#selectedImg')
+                // 确保图片已经加载
+                if (selectedImg.getBoundingClientRect().width > 0) {
+                  _this.setRectangles()
+                } else {
+                  selectedImg.onload = function () {
+                    _this.setRectangles()
+                  }
+                }
+              }
+            })
+            .catch(error => {
+              console.error(error)
+            })
+        },
+
+        // 将 markers 数据转换后保存到 rectangles，并在 canvas 中绘制 rectangles
+        setRectangles() {
+          const _this = this
+
+          rectangles.splice(0)
+
+          const selectedImgSize = document.querySelector('#selectedImg').getBoundingClientRect()
+          const w = selectedImgSize.width
+          const h = selectedImgSize.height
+
+          // console.log('selectedImg', selectedImgSize)
+
+          _this.markers.forEach(marker => {
+            const rect = {
+              id: marker.id,
+              name: marker.name,
+              x: w * marker.roi[0],
+              y: h * marker.roi[1],
+              width: w * marker.roi[2],
+              height: h * marker.roi[3]
+            }
+            rectangles.push(rect) // 存储 rect
+            clearCanvas()
+            drawRectangle(rect.x, rect.y, rect.width, rect.height) // 绘制 rect
+            // console.log('rectangles', selectedImgSize, rectangles, rect)
+          })
+        },
+
+        // 检测执行【初始化】：抓拍标靶基准图像
+        captureReferenceImage() {
+          const _this = this
+          const dom = document.querySelector('#layerInit')
+          const $ = layui.$
+
+          layui.use(['layer', 'form'], function () {
+            layer.open({
+              type: 1,
+              title: '初始化设置',
+              content: $('#layerInit'), //这里content是一个DOM，注意：最好该元素存放在body最外层，否则可能被其它的相对元素所影响
+              success: function (layero, index) {
+                form.val('formInitConfig', {
+                  //formInitConfig 即 class="layui-form" 所在元素属性 lay-filter="" 对应的值
+                  id: _this.currentCamera.id,
+                  sample: 10,
+                  save_path: 'd:/temp'
+                })
+              }
+            })
+          })
+        },
+
+        // 检测执行【开始】：设置定时对比
+        setIntervalCheck() {
+          const _this = this
+          const id = _this.currentCamera.id
+          if (!id) {
+            layer.msg('请选择相机！')
+            return
+          }
+
+          _this.getIntervalCheckResult()
+
+          api
+            .post('/api/v1/camera/set-timed-check', {
+              camera: id, // 相机ID
+              algorithm: 'optical-flow', // 对比算法: elliptic, optical-flow
+              sample: 10, // 连续抓拍样本数
+              interval: 3600 // 对比间隔 (s)
+            })
+            .then(res => {
+              if (res.status === 1) {
+                layer.msg('已设置定时对比！')
+                _this.getIntervalCheckResult('interval')
+              }
+            })
+            .catch(err => {
+              console.log(err)
+            })
+          return false
+        },
+
+        // 检测执行【暂停】：取消定时对比
+        cancelIntervalCheck() {
+          const _this = this
+          const id = _this.currentCamera.id
+          if (!id) {
+            layer.msg('请选择相机！')
+            return
+          }
+          api
+            .post('/api/v1/camera/cancel-timed-check', {
+              camera: id // 相机ID
+            })
+            .then(res => {
+              if (res.status === 1) {
+                layer.msg('已取消定时对比！')
+              }
+            })
+            .catch(err => {
+              console.log(err)
+            })
+          return false
+        },
+
+        // 获取定时对比结果
+        getIntervalCheckResult(interval) {
+          const _this = this
+          const id = _this.currentCamera.id
+          if (!id) {
+            layer.msg('请选择相机！')
+            return
+          }
+
+          api
+            .get('/assets/dataset/checked-result.json') // 正式接口: /api/v1/camera/{ID}/get-timed-check-result
+            .then(res => {
+              if (res.status === 1) {
+                console.log('res', res)
+                if (res.data) {
+                  const datas = res.data.results
+                  const realtimeDataList = document.querySelector('#realtimeDataList')
+                  let list = ''
+
+                  datas.forEach(data => {
+                    const offsets = data.marker_offset
+                    list += `<dt>时间：${data.datetime}</dt>`
+                    offsets.forEach(offset => {
+                      list += `<dd><span class="marker">测点${offset.marker}：</span><span class="x">x ${offset.offset[0]}</span><span class="y">y ${offset.offset[0]}</span></dd>`
+                    })
+                  })
+                  realtimeDataList.innerHTML = list
+                }
+
+                if (interval) {
+                  setTimeout(() => {
+                    _this.getIntervalCheckResult(interval)
+                  }, 3600 * 1000)
+                }
+              }
+            })
+            .catch(err => {
+              console.log(err)
+            })
+          return false
+        },
+
+        // 添加日志
+        addLog(info) {
+          const id = new Date().getTime()
+          let layFilter
+          if (info && info.elem) {
+            layFilter = info.elem.getAttribute('lay-filter')
+          }
+          if (layFilter) {
+            const content = this.layFilterKeys[layFilter]
+            store.add({ id: id, name: content })
+          }
+          this.showLogs()
+          console.log('form.on', info.elem.getAttribute('lay-filter'))
+        },
+
+        // 显示本地日志列表
+        showLogs() {
+          const allStores = store.getAll()
+          const logs = document.querySelector('#logsList')
+          logs.innerHTML = ''
+          let li, firstChild
+
+          allStores.forEach(store => {
+            firstChild = logs.firstElementChild
+            li = document.createElement('li')
+            li.innerHTML = `<span class="content">${store.name}</span><span class="date">${store.date}</span>`
+
+            if (firstChild) {
+              logs.insertBefore(li, firstChild)
+              firstChild = li
+            } else {
+              logs.appendChild(li)
+            }
+          })
+        }
+      })
+      data.layuiOperate()
+      data.getCameras()
+      data.showLogs()
+
+      const vue = createApp({
+        data
+      }).mount('#app')
+    </script>
+  </body>
+</html>

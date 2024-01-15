@@ -1,0 +1,251 @@
+:root {
+  --main-red: #ff5722;
+  --main-green: #67c23a;
+  --main-blue: #1e9fff;
+  --main-yellow: #e6a23c;
+  --light-cyan: #d8e6e7;
+  --label-color: #77919d;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+#app {
+  width: 100%;
+  height: 100%;
+}
+
+/* 左侧 */
+.left__side__box {
+  position: relative;
+  width: 800px;
+  padding: 10px;
+  float: left;
+}
+
+/* 左侧摄像头图片 */
+.photo__box {
+  position: absolute;
+  width: 800px;
+  height: 600px;
+  top: 10px;
+  left: 10px;
+  z-index: -1;
+}
+.photo__box img {
+  max-width: 100%;
+  max-height: 100%;
+}
+#canvas {
+  border: 1px solid #eee;
+  box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.1);
+}
+.context__menu {
+  min-width: 100px;
+  padding: 8px 5px;
+  border-radius: 8px;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  z-index: 999;
+}
+.context__menu .context {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.context__menu .context li {
+  padding: 5px 8px;
+  cursor: pointer;
+}
+.context__menu .context li:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.left__bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 10px;
+  margin-top: 10px;
+  color: #fff;
+}
+
+.logs__view {
+  box-sizing: border-box;
+  flex-basis: 60%;
+  padding: 5px;
+  height: 12vh;
+  position: relative;
+  background-color: var(--main-green);
+}
+.logs__title {
+  position: absolute;
+  top: 0;
+  right: 0px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  background-color: var(--label-color);
+  font-size: 12px;
+  opacity: 0.7;
+}
+.logs__list {
+  height: 100%;
+  overflow-y: auto;
+}
+.logs__list li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  position: relative;
+  margin: 3px;
+  padding-left: 10px;
+}
+.logs__list li::before {
+  content: '';
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  left: 0;
+  top: 50%;
+  border-radius: 50%;
+  background-color: var(--light-cyan);
+  transform: translateY(-50%);
+}
+.logs__list li .content {
+  flex-grow: 1;
+}
+.logs__list .date {
+  margin-left: 20px;
+  font-size: 12px;
+  color: var(--light-cyan);
+}
+.tools {
+  box-sizing: border-box;
+  flex-basis: 40%;
+  padding: 5px;
+  background-color: var(--main-blue);
+}
+.tools .camera__list .layui-input-block {
+  margin: 0 1em;
+}
+.tools .camera__list {
+  color: #000;
+}
+
+/* 右侧 */
+.right__side__box {
+  position: absolute;
+  width: calc(100% - 830px);
+  height: 100vh;
+  top: 0;
+  right: 10px;
+  overflow-y: auto;
+}
+
+.layui-tab-card > .layui-tab-title .layui-this {
+  color: var(--main-blue);
+}
+.layui-tab-item {
+  padding: 15px;
+}
+
+.layui-form-label {
+  color: var(--label-color);
+}
+.layui-btn-success {
+  background-color: var(--main-green);
+}
+.layui-btn-reset {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.tab-n1 .layui-form {
+  height: 25vh;
+  overflow-y: auto;
+}
+/* 相机设置表单 */
+.row_2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.layui-form .others .layui-form-item,
+.row_2 .layui-form-item {
+  flex-grow: 1;
+}
+
+.layui-form .others {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding: 15px 20px 0;
+  background-color: var(--light-cyan);
+}
+.form-upload .layui-form-label {
+  width: 110px;
+}
+.form-upload .layui-input-block {
+  margin-left: 140px;
+}
+
+.form-init {
+  margin: 15px 20px 0;
+}
+
+/* 实时数据 */
+.realtime__data__list {
+  height: 8.76vh;
+  margin-bottom: 5px;
+  padding: 5px 12px 10px;
+  border-radius: 10px;
+  background-color: var(--light-cyan);
+  overflow-y: auto;
+}
+.realtime__data__list:last-child {
+  margin-bottom: 0;
+}
+.realtime__data__list dt {
+  padding: 3px 1em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+  color: var(--label-color);
+}
+.realtime__data__list dd {
+  margin-top: 5px;
+  padding-left: 10px;
+  font-size: medium;
+}
+.realtime__data__list dd .x {
+  display: inline-block;
+  margin: 0 20px 0 8px;
+}
+@media screen and (min-width: 1600px) {
+  .row_2 .layui-form-item,
+  .layui-form .others .layui-form-item {
+    flex-basis: 50%;
+  }
+
+  .row_2 .layui-form-btns {
+    flex-basis: 100%;
+  }
+}

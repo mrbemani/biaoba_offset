@@ -1,4 +1,4 @@
-# NanDi iCube - API Document
+# Marker Offset-Check - API Document
 
 version: 1.0
 
@@ -270,6 +270,64 @@ GET /api/v1/camera/{ID}/list-markers
             ...
         ]
     }
+}
+```
+
+
+## 设置指定相机的标靶
+
+指定相机（ID），设置其下所有标靶的信息
+
+```http
+POST /api/v1/camera/{ID}/set-markers
+```
+
+#### Request
+
+```json
+{
+    "markers": [
+        {
+            "id": 1,                // 标靶ID
+            "name": "marker_1",     // 标靶名称
+            "type": "circle",       // 标靶类型
+            "size": 0.10,           // 标靶尺寸 (m)
+            "roi": [                // 标靶ROI: [left, top, width, height]
+                0.52, 0.75, 0.052, 0.052
+            ],
+            "position": [           // 标靶位置 (m)
+                0.0, 0.0, 0.0
+            ],
+            "rotation": [           // 标靶旋转 (rad)
+                0.0, 0.0, 0.0
+            ]
+        },
+        {
+            "id": 2,
+            "name": "marker_2",
+            "type": "circle",
+            "size": 0.10,
+            "roi": [
+                0, 0, 0, 0
+            ],
+            "position": [
+                0.0, 0.0, 0.0
+            ],
+            "rotation": [
+                0.0, 0.0, 0.0
+            ]
+        },
+        ...
+    ]
+}
+```
+
+#### Response
+
+```json
+{
+    "status": 1,        // 返回状态 1 为成功, 0 为失败
+    "data": null
 }
 ```
 
