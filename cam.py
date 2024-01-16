@@ -24,7 +24,7 @@ if os_type == 'linux':
 elif os_type == 'darwin':
     libc = cdll.LoadLibrary("libc.dylib")
 
-MvImport = "./MvImport_win"
+MvImport = "C:\\Program Files (x86)\\MVS\\Development\\Samples\\Python\\MvImport" #"./MvImport_win"
 if os_type == 'linux':
     MvImport = "./MvImport_linux"
 elif os_type == 'darwin':
@@ -32,7 +32,6 @@ elif os_type == 'darwin':
 
 sys.path.append(MvImport)
 from MvCameraControl_class import *
-from CamOperation_class import CameraOperation
 
 g_bExit = False
 g_currentFrame = None
@@ -115,7 +114,7 @@ def getCurrentFrame():
     return frame
 
 
-def get_camera_list():
+def get_camera_list(return_json=False):
     deviceList = MV_CC_DEVICE_INFO_LIST()
     tlayerType = MV_GIGE_DEVICE
     
@@ -131,6 +130,7 @@ def get_camera_list():
 
     print ("Find %d devices!" % deviceList.nDeviceNum)
 
+    camera_info_list = []
     for i in range(0, deviceList.nDeviceNum):
         mvcc_dev_info = cast(deviceList.pDeviceInfo[i], POINTER(MV_CC_DEVICE_INFO)).contents
         print ("\ngige device: [%d]" % i)
@@ -145,9 +145,18 @@ def get_camera_list():
         nip2 = ((mvcc_dev_info.SpecialInfo.stGigEInfo.nCurrentIp & 0x00ff0000) >> 16)
         nip3 = ((mvcc_dev_info.SpecialInfo.stGigEInfo.nCurrentIp & 0x0000ff00) >> 8)
         nip4 = (mvcc_dev_info.SpecialInfo.stGigEInfo.nCurrentIp & 0x000000ff)
+        cam_info = dict(
+            id = i,
+            name = strModeName,
+            ip = f"{nip1}.{nip2}.{nip3}.{nip4}"
+        )
         print ("current ip: %d.%d.%d.%d\n" % (nip1, nip2, nip3, nip4))
-        
-    return deviceList, True, deviceList.nDeviceNum
+        camera_info_list.append(cam_info)
+    
+    if return_json:
+        return camera_info_list, True, deviceList.nDeviceNum
+    else:
+        return deviceList, True, deviceList.nDeviceNum
 
 
 def init_camera(deviceList: any, cameraIdx: int, exposureTime: float = 2000.0, pixelFormat: int = PixelType_Gvsp_Mono12):

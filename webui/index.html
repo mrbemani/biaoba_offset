@@ -10,9 +10,6 @@
   <body>
     <div id="app" v-scope>
       <div class="left__side__box">
-        <div class="photo__box">
-          <img :src="data.imgurl" id="selectedImg" />
-        </div>
         <canvas id="canvas" width="798" height="598"></canvas>
 
         <div class="left__bottom">
@@ -23,6 +20,14 @@
           <div class="tools">
             <div class="layui-form" lay-filter="formCameraList">
               <div class="layui-form-item camera__list">
+                <div class="layui-form-item">
+                  <div class="layui-input-inline toggle__mode">
+                    <button class="layui-btn layui-btn-warm" lay-submit id="toggleMode" lay-filter="toggleMode" @click="data.toggleMode">
+                      绘制/修改模式
+                    </button>
+                  </div>
+                  <div class="layui-form-mid layui-word-aux">滚动滚轮缩放画布</div>
+                </div>
                 <div class="layui-input-block">
                   <select name="cameraList" id="cameraList" lay-filter="cameraList">
                     <option value="" selected>选择相机</option>
@@ -552,7 +557,6 @@
           name: '',
           ip: ''
         },
-        imgurl: '', // 相机画面图片地址
         cameraInfo: {
           settings: {
             exposure: 0,
@@ -572,13 +576,14 @@
           start: '检测执行【开始】',
           stop: '检测执行【暂停】',
           formUploadServer: '数据上传',
-          formSubmitInit: '确认检测执行【初始化】'
+          formSubmitInit: '确认检测执行【初始化】',
+          toggleMode: '切换到拖动画布模式'
         },
 
         // 获取相机列表
         getCameras() {
           api
-            .get('/api/v1/camera/list') // 正式接口: /api/v1/camera/list
+            .get('/assets/dataset/camera-list.json') // 正式接口: /api/v1/camera/list
             .then(res => {
               if (res.status === 1) {
                 this.cameras = res.data.cameras
@@ -604,14 +609,18 @@
 
             // 选项卡(tabN1)切换事件
             element.on('tab(tabN1)', function (data) {
+              console.log('switch', selectedRectIndex)
               // 切换到【标靶设置】
               if (data.index === 2) {
-                if (!selectedRectangle) return
+                if (selectedRectIndex === -1) return
+                const selectedRectangle = rectangles[selectedRectIndex]
                 const selectedRect = _this.markers.filter(marker => marker.id === selectedRectangle.id)
 
-                const selectedImgSize = document.querySelector('#selectedImg').getBoundingClientRect()
-                const w = selectedImgSize.width
-                const h = selectedImgSize.height
+                // const selectedImgSize = document.querySelector('#selectedImg').getBoundingClientRect()
+                // const w = selectedImgSize.width
+                // const h = selectedImgSize.height
+                const w = img.width
+                const h = img.height
                 const roi =
                   selectedRectangle.x / w +
                   ', ' +
@@ -620,6 +629,8 @@
                   selectedRectangle.width / w +
                   ', ' +
                   selectedRectangle.height / h
+
+                console.log('wh', w, h, selectedRectangle, roi)
 
                 if (selectedRect.length !== 0) {
                   // 已设置标靶
@@ -766,7 +777,6 @@
               })
               _this.getCameraFrame(id) // 获取相机画面
               _this.getCameraInfo(id) // 获取相机详细信息
-              _this.getCameraMarkers(id) // 获取相机的标靶列表
             })
           })
         },
@@ -795,20 +805,45 @@
           }
         },
 
+        toggleMode(event) {
+          console.log('toggleMode', event.target)
+          event.target.innerHTML = isDrawingMode ? '绘制/修改模式' : '拖动画布模式'
+          this.layFilterKeys.toggleMode = isDrawingMode ? '切换到【拖动画布】模式' : '切换到【绘制/修改】模式'
+          isMoveEnabled = !isMoveEnabled
+          isDrawingMode = !isMoveEnabled
+          selectedRectIndex = -1
+          canvas.style.cursor = isMoveEnabled ? 'grab' : 'crosshair'
+          drawImage()
+        },
+
         // 获取相机画面
         getCameraFrame(id) {
           const _this = this
           if (id === 'null') {
-            _this.imgurl = ''
+            img.src = ''
           } else {
             // Tips: 正式版调用以下接口
             api
               .get(`/assets/dataset/frame-url.json`) // 正式接口: /api/v1/camera/${id}/get-frame
               .then(res => {
-                _this.imgurl = res.data.frameurl
+                img = new Image()
+                img.src = res.data.frameurl
+                img.onload = function () {
+                  // 计算缩放比例，使图片刚好适应 canvas 尺寸
+                  const widthRatio = canvas.width / img.width
+                  const heightRatio = canvas.height / img.height
+                  scale = Math.min(widthRatio, heightRatio)
+
+                  // 让图片刚好居中显示在 canvas 中
+                  imgX = (canvas.width - img.width * scale) / 2
+                  imgY = (canvas.height - img.height * scale) / 2
+
+                  drawImage()
+                  _this.getCameraMarkers(id) // 获取相机的标靶列表
+                }
               })
-              .catch(error => {
-                console.error(errors)
+              .catch(err => {
+                console.error(err)
               })
           }
         },
@@ -836,16 +871,9 @@
             .then(res => {
               if (res.status === 1) {
                 _this.markers = res.data.markers
+                console.log('markers', _this.markers)
 
-                const selectedImg = document.querySelector('#selectedImg')
-                // 确保图片已经加载
-                if (selectedImg.getBoundingClientRect().width > 0) {
-                  _this.setRectangles()
-                } else {
-                  selectedImg.onload = function () {
-                    _this.setRectangles()
-                  }
-                }
+                _this.setRectangles()
               }
             })
             .catch(error => {
@@ -859,11 +887,8 @@
 
           rectangles.splice(0)
 
-          const selectedImgSize = document.querySelector('#selectedImg').getBoundingClientRect()
-          const w = selectedImgSize.width
-          const h = selectedImgSize.height
-
-          // console.log('selectedImg', selectedImgSize)
+          const w = img.width
+          const h = img.height
 
           _this.markers.forEach(marker => {
             const rect = {
@@ -875,8 +900,7 @@
               height: h * marker.roi[3]
             }
             rectangles.push(rect) // 存储 rect
-            clearCanvas()
-            drawRectangle(rect.x, rect.y, rect.width, rect.height) // 绘制 rect
+            drawImage()
             // console.log('rectangles', selectedImgSize, rectangles, rect)
           })
         },

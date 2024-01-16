@@ -1,5 +1,9 @@
 # server backend
 
+import sys
+import os
+import argparse
+import threading
 from flask import Flask, jsonify, request, render_template, redirect, url_for, send_from_directory
 from flask_cors import CORS
 import cam
@@ -7,9 +11,6 @@ import cam
 
 app = Flask(__name__)
 CORS(app)
-
-# Dummy data for demonstration
-cameras = [{"id": 1, "name": "相机001", "ip": "192.168.0.11"}, {"id": 2, "name": "相机002", "ip": "192.168.0.12"}]
 
 
 @app.route('/', methods=['GET'])
@@ -22,6 +23,12 @@ def send_assets(path):
 
 @app.route('/api/v1/camera/list', methods=['GET'])
 def get_camera_list():
+    cameras, ret, num_devices = cam.get_camera_list(return_json=True)
+    if not ret:
+        return jsonify(status=0, data={"cameras": []})
+    if num_devices == 0:
+        return jsonify(status=1, data={"cameras": []})
+    print (cameras)
     return jsonify(status=1, data={"cameras": cameras})
 
 @app.route('/api/v1/camera/<int:camera_id>/get-frame', methods=['GET'])
@@ -95,4 +102,5 @@ def get_remote_server():
     pass
 
 if __name__ == '__main__':
+    threading.Thread(target=cam.ts_start_camera, args=(0, 5000.0), daemon=True).start()
     app.run(debug=True)

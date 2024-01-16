@@ -1,50 +1,38 @@
 const canvas = document.getElementById('canvas')
 const ctx = canvas.getContext('2d')
-const rectangles = []
-let isDrawing = false
+// const toggleButton = document.getElementById('toggleButton')
+
+let scale // 初始缩放比例
+let img
+let imgX = 0 // 图片左上角 X 坐标
+let imgY = 0 // 图片左上角 Y 坐标
 let isDragging = false
-let isResizing = false
-let selectedRectangle = null
-let offsetX = 0
-let offsetY = 0
-let resizeHandleSize = 12
-let resizingHandleIndex = -1 // 记录调整大小的手柄索引
+let startDragX = 0
+let startDragY = 0
+let isMoveEnabled = true // 移动开关
+let isDrawingMode = false // 绘制模式开关
+let selectedRectIndex = -1 // 选中的长方形索引
+let resizeHandleIndex = -1 // 选中的调整大小的手柄索引
+let rectangles = [] // 存储绘制的长方形
+const handleSize = 10 // 四角上小正方形的边长
 
-function drawRectangle(x, y, width, height) {
-  ctx.strokeStyle = 'red'
-  ctx.lineWidth = 2
-  ctx.strokeRect(x, y, width, height)
-}
+// 加载图片
+// img = new Image()
+// img.src = 'assets/img/target1.jpg'
 
-function drawResizeHandles(x, y, width, height) {
-  const halfSize = resizeHandleSize / 2
-  // const halfSize = 0
+// // 图片加载完成后执行绘制
+// img.onload = function () {
+//   // 计算缩放比例，使图片刚好适应 canvas 尺寸
+//   const widthRatio = canvas.width / img.width
+//   const heightRatio = canvas.height / img.height
+//   scale = Math.min(widthRatio, heightRatio)
 
-  ctx.fillStyle = 'red'
-  // 左上角
-  ctx.fillRect(x - halfSize, y - halfSize, resizeHandleSize, resizeHandleSize)
-  // 右上角
-  ctx.fillRect(x + width - halfSize, y - halfSize, resizeHandleSize, resizeHandleSize)
-  // 左下角
-  ctx.fillRect(x - halfSize, y + height - halfSize, resizeHandleSize, resizeHandleSize)
-  // 右下角
-  ctx.fillRect(x + width - halfSize, y + height - halfSize, resizeHandleSize, resizeHandleSize)
-}
+//   // 让图片刚好居中显示在 canvas 中
+//   imgX = (canvas.width - img.width * scale) / 2
+//   imgY = (canvas.height - img.height * scale) / 2
 
-function clearCanvas() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height)
-}
-
-function findRectangle(x, y) {
-  const halfSize = resizeHandleSize / 2
-  return rectangles.find(
-    rectangle =>
-      x >= rectangle.x - halfSize &&
-      x <= rectangle.x + rectangle.width + halfSize &&
-      y >= rectangle.y - halfSize &&
-      y <= rectangle.y + rectangle.height + halfSize
-  )
-}
+//   drawImage()
+// }
 
 // 切换到【标靶设置】选项卡
 function switchAndSetMarker() {
@@ -56,175 +44,268 @@ function switchAndSetMarker() {
   element.tabChange('tabN1', 'setMarker')
 }
 
-function handleMouseDown(event) {
-  resizingHandleIndex = -1
-  const x = event.clientX - canvas.getBoundingClientRect().left
-  const y = event.clientY - canvas.getBoundingClientRect().top
+// 绘制图片
+function drawImage() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-  if (event.button === 0) {
-    selectedRectangle = findRectangle(x, y)
-    // console.log('MouseDown selectedRectangle', selectedRectangle)
+  // 计算绘制图片的尺寸
+  const imageWidth = img.width * scale
+  const imageHeight = img.height * scale
 
-    if (selectedRectangle) {
-      switchAndSetMarker()
-      const resizeHandles = calculateResizeHandles(selectedRectangle)
-      resizingHandleIndex = -1
+  // 使用 drawImage 方法绘制图片
+  ctx.drawImage(img, imgX, imgY, imageWidth, imageHeight)
 
-      // Check if the mouse is inside any of the resize handles
-      for (let i = 0; i < resizeHandles.length; i++) {
-        const handle = resizeHandles[i]
-        if (x >= handle.x && x <= handle.x + resizeHandleSize && y >= handle.y && y <= handle.y + resizeHandleSize) {
-          resizingHandleIndex = i
-          break
+  // 绘制已保存的矩形
+  ctx.strokeStyle = 'red'
+  ctx.lineWidth = 2
+
+  rectangles.forEach((rect, index) => {
+    const rectX = imgX + rect.x * scale
+    const rectY = imgY + rect.y * scale
+    const rectWidth = rect.width * scale
+    const rectHeight = rect.height * scale
+
+    ctx.strokeRect(rectX, rectY, rectWidth, rectHeight)
+
+    if (index === selectedRectIndex) {
+      // 绘制选中长方形的4个小正方形
+      const handles = [
+        { x: rectX, y: rectY },
+        { x: rectX + rectWidth, y: rectY },
+        { x: rectX + rectWidth, y: rectY + rectHeight },
+        { x: rectX, y: rectY + rectHeight }
+      ]
+
+      ctx.fillStyle = 'red'
+      handles.forEach((handle, handleIndex) => {
+        const halfSize = handleSize / 2
+        ctx.fillRect(handle.x - halfSize, handle.y - halfSize, handleSize, handleSize)
+        if (handleIndex % 2 === 0) {
+          // 绘制调整大小的手柄
+          ctx.fillRect(handle.x - halfSize, handle.y - halfSize, handleSize, handleSize)
         }
+      })
+    }
+  })
+}
+
+// 更新 Canvas 的缩放
+function updateScale(mouseX, mouseY) {
+  // 计算鼠标在图片上的位置
+  const mouseXInImage = (mouseX - imgX) / scale
+  const mouseYInImage = (mouseY - imgY) / scale
+
+  // 调整缩放比例
+  scale += event.deltaY > 0 ? -0.05 : 0.05
+  scale = Math.max(0.05, scale)
+
+  // 更新图片位置，以鼠标位置为中心
+  imgX = mouseX - mouseXInImage * scale
+  imgY = mouseY - mouseYInImage * scale
+
+  drawImage()
+}
+
+// 判断点是否在矩形内
+function pointInsideRect(x, y, rect) {
+  const rectX = imgX + rect.x * scale
+  const rectY = imgY + rect.y * scale
+  const rectWidth = rect.width * scale
+  const rectHeight = rect.height * scale
+
+  const halfSize = handleSize / 2
+
+  return x >= rectX - halfSize && x <= rectX + rectWidth + halfSize && y >= rectY - halfSize && y <= rectY + rectHeight + halfSize
+}
+
+// 判断点是否在手柄内
+function pointInsideHandle(x, y, handle) {
+  const handleX = imgX + handle.x * scale
+  const handleY = imgY + handle.y * scale
+  const halfSize = handleSize / 2
+
+  return x >= handleX - halfSize && x <= handleX + halfSize && y >= handleY - halfSize && y <= handleY + halfSize
+}
+
+// 获取鼠标在哪个矩形上
+function getSelectedRectIndex(mouseX, mouseY) {
+  for (let i = rectangles.length - 1; i >= 0; i--) {
+    if (pointInsideRect(mouseX, mouseY, rectangles[i])) {
+      return i
+    }
+  }
+  return -1
+}
+
+// 获取鼠标在哪个手柄上
+function getResizeHandleIndex(mouseX, mouseY) {
+  if (selectedRectIndex > -1) {
+    const rect = rectangles[selectedRectIndex]
+    const handles = [
+      { x: rect.x, y: rect.y },
+      { x: rect.x + rect.width, y: rect.y },
+      { x: rect.x + rect.width, y: rect.y + rect.height },
+      { x: rect.x, y: rect.y + rect.height }
+    ]
+
+    for (let j = 0; j < handles.length; j++) {
+      if (pointInsideHandle(mouseX, mouseY, handles[j])) {
+        return { rectIndex: selectedRectIndex, handleIndex: j }
       }
+    }
+  }
+  return -1
+}
 
-      if (resizingHandleIndex >= 0) {
-        isResizing = true
-        offsetX = x
-        offsetY = y
-      } else {
+// 处理滚轮事件
+function handleWheel(event) {
+  event.preventDefault()
+
+  if (isMoveEnabled || isDrawingMode) {
+    updateScale(event.clientX, event.clientY)
+  }
+}
+
+// 处理鼠标按下事件
+function handleMouseDown(event) {
+  if (isMoveEnabled) {
+    isDragging = true
+    startDragX = event.clientX
+    startDragY = event.clientY
+  } else if (isDrawingMode) {
+    // 切换选中的长方形
+    const mouseXInImage = event.clientX - canvas.getBoundingClientRect().left
+    const mouseYInImage = event.clientY - canvas.getBoundingClientRect().top
+    selectedRectIndex = getSelectedRectIndex(mouseXInImage, mouseYInImage)
+
+    // 判断是否在手柄上
+    if (selectedRectIndex > -1) {
+      switchAndSetMarker()
+      resizeHandleIndex = getResizeHandleIndex(mouseXInImage, mouseYInImage)
+      if (resizeHandleIndex !== -1) {
+        // 如果在手柄上，记录初始拖动位置
         isDragging = true
-        offsetX = x - selectedRectangle.x
-        offsetY = y - selectedRectangle.y
-
-        // Remove resize handles from other rectangles
-        clearCanvas()
-        rectangles.forEach(rect => {
-          if (rect !== selectedRectangle) {
-            rect.showHandles = false
-          }
-        })
+        startDragX = mouseXInImage - rectangles[resizeHandleIndex.rectIndex].x * scale
+        startDragY = mouseYInImage - rectangles[resizeHandleIndex.rectIndex].y * scale
+      } else {
+        // 否则记录选中矩形的初始拖动位置
+        isDragging = true
+        startDragX = mouseXInImage - rectangles[selectedRectIndex].x * scale
+        startDragY = mouseYInImage - rectangles[selectedRectIndex].y * scale
       }
     } else {
-      isDrawing = true
-      offsetX = x
-      offsetY = y
+      // 只有在拖动时才绘制长方形
+      const date = new Date()
+      const id =
+        date.getFullYear() +
+        doubleDigit(date.getMonth() + 1) +
+        doubleDigit(date.getDate()) +
+        doubleDigit(date.getHours()) +
+        doubleDigit(date.getMinutes()) +
+        doubleDigit(date.getSeconds())
+      const name = 'marker_' + id
 
-      // Remove resize handles from other rectangles
-      clearCanvas()
-      rectangles.forEach(rect => {
-        rect.showHandles = false
+      isDragging = true
+      startDragX = (event.clientX - imgX) / scale
+      startDragY = (event.clientY - imgY) / scale
+
+      rectangles.push({
+        id: id,
+        name: name,
+        x: startDragX,
+        y: startDragY,
+        width: 0,
+        height: 0
       })
     }
   }
-}
-
-function handleMouseMove(event) {
-  const x = event.clientX - canvas.getBoundingClientRect().left
-  const y = event.clientY - canvas.getBoundingClientRect().top
-
-  if (isDragging) {
-    selectedRectangle.x = x - offsetX
-    selectedRectangle.y = y - offsetY
-    clearCanvas()
-    rectangles.forEach(rectangle => drawRectangle(rectangle.x, rectangle.y, rectangle.width, rectangle.height))
-    drawResizeHandles(selectedRectangle.x, selectedRectangle.y, selectedRectangle.width, selectedRectangle.height)
-    switchAndSetMarker()
-  } else if (isResizing) {
-    // console.log('mouseMove', x, y, offsetX, offsetY)
-    const deltaX = x - offsetX
-    const deltaY = y - offsetY
-
-    switch (resizingHandleIndex) {
-      case 0: // 左上角
-        selectedRectangle.x += deltaX
-        selectedRectangle.y += deltaY
-        selectedRectangle.width -= deltaX
-        selectedRectangle.height -= deltaY
-        break
-      case 1: // 右上角
-        selectedRectangle.y += deltaY
-        selectedRectangle.width += deltaX
-        selectedRectangle.height -= deltaY
-        break
-      case 2: // 左下角
-        selectedRectangle.x += deltaX
-        selectedRectangle.width -= deltaX
-        selectedRectangle.height += deltaY
-        break
-      case 3: // 右下角
-        selectedRectangle.width += deltaX
-        selectedRectangle.height += deltaY
-        break
-    }
-
-    clearCanvas()
-    rectangles.forEach(rectangle => drawRectangle(rectangle.x, rectangle.y, rectangle.width, rectangle.height))
-    drawResizeHandles(selectedRectangle.x, selectedRectangle.y, selectedRectangle.width, selectedRectangle.height)
-    switchAndSetMarker()
-
-    offsetX = x
-    offsetY = y
-  } else if (isDrawing) {
-    clearCanvas()
-    const width = x - offsetX
-    const height = y - offsetY
-    drawRectangle(offsetX, offsetY, width, height)
-  }
-}
-
-function handleMouseUp() {
-  if (isDrawing || isDragging || isResizing) {
-    isDrawing = false
-    isDragging = false
-    isResizing = false
-
-    if (!selectedRectangle && !isDrawing) {
-      const x = event.clientX - canvas.getBoundingClientRect().left
-      const y = event.clientY - canvas.getBoundingClientRect().top
-      const width = x - offsetX
-      const height = y - offsetY
-
-      storeRectangle({ x: offsetX, y: offsetY, width: Math.abs(width), height: Math.abs(height) })
-      clearCanvas()
-      rectangles.forEach(rectangle => drawRectangle(rectangle.x, rectangle.y, rectangle.width, rectangle.height))
-    }
-  }
-}
-
-function storeRectangle(rect) {
-  const date = new Date()
-  const id =
-    date.getFullYear() +
-    doubleDigit(date.getMonth() + 1) +
-    doubleDigit(date.getDate()) +
-    doubleDigit(date.getHours()) +
-    doubleDigit(date.getMinutes()) +
-    doubleDigit(date.getSeconds())
-  const name = 'marker_' + id
-  rect.id = id
-  rect.name = name
-  rectangles.push(rect)
-  console.log('rectangles', rectangles, selectedRectangle)
 }
 
 function doubleDigit(num) {
   return num < 10 ? '0' + num : num.toString()
 }
 
-function calculateResizeHandles(rectangle) {
-  const handles = []
-  handles.push({ x: rectangle.x - resizeHandleSize / 2, y: rectangle.y - resizeHandleSize / 2 })
-  handles.push({ x: rectangle.x + rectangle.width - resizeHandleSize / 2, y: rectangle.y - resizeHandleSize / 2 })
-  handles.push({ x: rectangle.x - resizeHandleSize / 2, y: rectangle.y + rectangle.height - resizeHandleSize / 2 })
-  handles.push({ x: rectangle.x + rectangle.width - resizeHandleSize / 2, y: rectangle.y + rectangle.height - resizeHandleSize / 2 })
-  return handles
-}
+// 处理鼠标移动事件
+function handleMouseMove(event) {
+  if (isDragging && isMoveEnabled) {
+    const offsetX = event.clientX - startDragX
+    const offsetY = event.clientY - startDragY
 
-function handleContextMenu(event) {
-  event.preventDefault() // 阻止默认右键菜单
+    // 根据鼠标拖动的偏移量调整图片位置
+    imgX += offsetX
+    imgY += offsetY
 
-  const x = event.clientX - canvas.getBoundingClientRect().left
-  const y = event.clientY - canvas.getBoundingClientRect().top
+    drawImage()
 
-  selectedRectangle = findRectangle(x, y)
+    // 更新起始拖动位置
+    startDragX = event.clientX
+    startDragY = event.clientY
+  } else if (isDragging && isDrawingMode) {
+    // 更新当前绘制的矩形的大小
+    const mouseXInImage = (event.clientX - imgX) / scale
+    const mouseYInImage = (event.clientY - imgY) / scale
 
-  if (selectedRectangle) {
-    showContextMenu(x, y)
+    if (resizeHandleIndex !== -1 && selectedRectIndex > -1) {
+      // 如果在手柄上，调整大小
+      const rect = rectangles[resizeHandleIndex.rectIndex]
+      const handle = resizeHandleIndex.handleIndex
+
+      if (handle === 0 || handle === 3) {
+        rect.width -= mouseXInImage - rect.x
+        rect.x = mouseXInImage
+      }
+      if (handle === 0 || handle === 1) {
+        rect.height -= mouseYInImage - rect.y
+        rect.y = mouseYInImage
+      }
+      if (handle === 1 || handle === 2) {
+        rect.width = mouseXInImage - rect.x
+      }
+      if (handle === 2 || handle === 3) {
+        rect.height = mouseYInImage - rect.y
+      }
+    } else if (selectedRectIndex > -1) {
+      // 移动选中的长方形
+      rectangles[selectedRectIndex].x = (event.clientX - canvas.getBoundingClientRect().left - startDragX) / scale
+      rectangles[selectedRectIndex].y = (event.clientY - canvas.getBoundingClientRect().top - startDragY) / scale
+    } else {
+      // 更新当前绘制的矩形的大小
+      rectangles[rectangles.length - 1].width = mouseXInImage - rectangles[rectangles.length - 1].x
+      rectangles[rectangles.length - 1].height = mouseYInImage - rectangles[rectangles.length - 1].y
+    }
+
+    drawImage()
   }
 }
 
+// 处理鼠标释放事件
+function handleMouseUp() {
+  isDragging = false
+  resizeHandleIndex = -1
+
+  if (isDrawingMode) {
+    // 结束绘制矩形
+    drawImage()
+
+    // 过滤掉宽高为 0 的 rect
+    rectangles = rectangles.filter(rect => rect.width > 0 && rect.height > 0)
+  }
+}
+
+// 处理右键菜单
+function handleContextMenu(event) {
+  event.preventDefault() // 阻止默认右键菜单
+  const mouseXInImage = event.clientX - canvas.getBoundingClientRect().left
+  const mouseYInImage = event.clientY - canvas.getBoundingClientRect().top
+  selectedRectIndex = getSelectedRectIndex(mouseXInImage, mouseYInImage)
+
+  if (selectedRectIndex > -1) {
+    // If a rectangle is selected, show the delete menu
+    showContextMenu(mouseXInImage, mouseYInImage)
+  }
+}
+
+// 显示右键菜单
 function showContextMenu(x, y) {
   const menu = document.createElement('div')
   menu.classList.add('context__menu')
@@ -247,6 +328,18 @@ function showContextMenu(x, y) {
   window.addEventListener('click', handleOutsideClick)
 }
 
+// 处理删除事件
+function handleDeleteClick() {
+  if (selectedRectIndex > -1) {
+    rectangles.splice(selectedRectIndex, 1)
+
+    drawImage()
+  }
+
+  document.body.removeChild(document.querySelector('.context__menu'))
+  window.removeEventListener('click', handleOutsideClick)
+}
+
 function handleOutsideClick(event) {
   const menu = document.querySelector('.context__menu')
 
@@ -256,41 +349,23 @@ function handleOutsideClick(event) {
   }
 }
 
-function handleEditClick() {
-  // 在这里执行编辑操作
-  document.body.removeChild(document.querySelector('.context__menu'))
-  window.removeEventListener('click', handleOutsideClick)
-}
+// 处理按钮点击事件
+// toggleButton.addEventListener('click', function () {
+//   isMoveEnabled = !isMoveEnabled
+//   isDrawingMode = !isMoveEnabled
+//   selectedRectIndex = -1
+//   canvas.style.cursor = isMoveEnabled ? 'grab' : 'crosshair'
+//   drawImage()
+// })
 
-function handleDeleteClick() {
-  if (selectedRectangle) {
-    const index = rectangles.indexOf(selectedRectangle)
-    rectangles.splice(index, 1)
-    clearCanvas()
-    rectangles.forEach(rectangle => drawRectangle(rectangle.x, rectangle.y, rectangle.width, rectangle.height))
-  }
+// 监听滚轮事件
+canvas.addEventListener('wheel', handleWheel)
 
-  document.body.removeChild(document.querySelector('.context__menu'))
-  window.removeEventListener('click', handleOutsideClick)
-}
-
-function render() {
-  rectangles.forEach(rectangle => {
-    drawRectangle(rectangle.x, rectangle.y, rectangle.width, rectangle.height)
-
-    if (rectangle === selectedRectangle) {
-      drawResizeHandles(rectangle.x, rectangle.y, rectangle.width, rectangle.height)
-    } else if (rectangle.showHandles) {
-      drawResizeHandles(rectangle.x, rectangle.y, rectangle.width, rectangle.height)
-    }
-  })
-
-  requestAnimationFrame(render)
-}
-
+// 监听鼠标按下事件
 canvas.addEventListener('mousedown', handleMouseDown)
 canvas.addEventListener('mousemove', handleMouseMove)
 canvas.addEventListener('mouseup', handleMouseUp)
 canvas.addEventListener('contextmenu', handleContextMenu)
 
-render()
+// 初始绘制
+// drawImage()

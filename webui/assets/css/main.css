@@ -147,6 +147,15 @@ body {
 }
 .tools .camera__list {
   color: #000;
+  text-align: center;
+}
+.tools .camera__list .toggle__mode {
+  width: 120px;
+  margin-left: 15px;
+}
+.tools .camera__list .layui-word-aux {
+  margin-left: 20px;
+  color: #fff !important;
 }
 
 /* 右侧 */
