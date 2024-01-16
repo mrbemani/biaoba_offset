@@ -1,4 +1,4 @@
-# use flask sql-alchemy to create a database model
+# use flask sql-alchemy to create a database model sqlite
 
 from flask_sqlalchemy import SQLAlchemy
 
