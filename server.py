@@ -10,7 +10,13 @@ import cam
 
 
 app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///records.sqlite3'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+app.config['JSONIFY_MIMETYPE'] = 'application/json;charset=utf-8'
+
 CORS(app)
+db.init_app(app)
 
 
 @app.route('/', methods=['GET'])
