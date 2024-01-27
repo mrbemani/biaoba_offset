@@ -95,6 +95,20 @@
                   </div>
                   <div class="layui-form-mid layui-word-aux">(m)</div>
                 </div>
+                <div class="layui-form-item">
+                  <label class="layui-form-label">图片路径</label>
+                  <div class="layui-input-block">
+                    <input
+                      type="string"
+                      name="images"
+                      required
+                      lay-verify="required"
+                      placeholder="请输入图片路径"
+                      autocomplete="off"
+                      class="layui-input"
+                    />
+                  </div>
+                </div>
                 <div class="layui-form-item layui-form-btns">
                   <div class="layui-input-block">
                     <button class="layui-btn layui-btn-normal" lay-submit lay-filter="formCalibrate">立即提交</button>
@@ -158,53 +172,8 @@
                     <input type="radio" name="standard" value="否" title="否" checked />
                   </div>
                 </div>
-                <div class="layui-form-item">
-                  <label class="layui-form-label">检测算法</label>
-                  <div class="layui-input-block">
-                    <select name="algorithm" lay-verify="required">
-                      <option value="elliptic">算法一 (elliptic)</option>
-                      <option value="optical-flow">算法二 (optical-flow)</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="layui-form-item">
-                  <label class="layui-form-label">采集方式</label>
-                  <div class="layui-input-block">
-                    <input type="radio" name="capture" value="手动" title="手动" checked />
-                    <input type="radio" name="capture" value="自动" title="自动" />
-                  </div>
-                </div>
+
                 <!-- 其它参数：通过相机信息自动填写 -->
-                <div class="others">
-                  <div class="layui-form-item">
-                    <label class="layui-form-label">采集频率</label>
-                    <div class="layui-input-block">
-                      <input
-                        type="text"
-                        name="frequency"
-                        required
-                        lay-verify="required"
-                        placeholder="请输入采集频率"
-                        autocomplete="off"
-                        class="layui-input"
-                      />
-                    </div>
-                  </div>
-                  <div class="layui-form-item">
-                    <label class="layui-form-label">采样数量</label>
-                    <div class="layui-input-block">
-                      <input
-                        type="text"
-                        name="sampleNumber"
-                        required
-                        lay-verify="required"
-                        placeholder="请输入采样数量"
-                        autocomplete="off"
-                        class="layui-input"
-                      />
-                    </div>
-                  </div>
-                </div>
                 <div class="others">
                   <div class="layui-form-item">
                     <label class="layui-form-label">竖向俯仰角</label>
@@ -512,7 +481,53 @@
             />
           </div>
         </div>
+
         <div class="layui-form-item">
+          <label class="layui-form-label">检测算法</label>
+          <div class="layui-input-block">
+            <select name="algorithm" lay-verify="required">
+              <option value="elliptic">算法一 (elliptic)</option>
+              <option value="optical-flow">算法二 (optical-flow)</option>
+            </select>
+          </div>
+        </div>
+        <div class="layui-form-item">
+          <label class="layui-form-label">采集方式</label>
+          <div class="layui-input-block">
+            <input type="radio" name="capture" value="手动" title="手动" />
+            <input type="radio" name="capture" value="自动" title="自动" checked />
+          </div>
+        </div>
+        <div class="layui-form-item">
+          <label class="layui-form-label">采集频率</label>
+          <div class="layui-input-block">
+            <input
+              type="text"
+              name="frequency"
+              required
+              lay-verify="required"
+              placeholder="请输入采集频率"
+              autocomplete="off"
+              class="layui-input"
+            />
+          </div>
+        </div>
+        <div class="layui-form-item">
+          <label class="layui-form-label">采样数量</label>
+          <div class="layui-input-block">
+            <input
+              type="text"
+              name="sampleNumber"
+              required
+              lay-verify="required"
+              placeholder="请输入采样数量"
+              autocomplete="off"
+              class="layui-input"
+            />
+          </div>
+        </div>
+
+        <!-- <div class="layui-form-item">
           <label class="layui-form-label">抓拍样本数</label>
           <div class="layui-input-block">
             <input
@@ -525,7 +540,7 @@
               class="layui-input"
             />
           </div>
-        </div>
+        </div> -->
         <div class="layui-form-item">
           <label class="layui-form-label">保存路径</label>
           <div class="layui-input-block">
@@ -583,7 +598,7 @@
         // 获取相机列表
         getCameras() {
           api
-            .get('/assets/dataset/camera-list.json') // 正式接口: /api/v1/camera/list
+            .get('/api/v1/camera/list') // 正式接口: /api/v1/camera/list
             .then(res => {
               if (res.status === 1) {
                 this.cameras = res.data.cameras
@@ -666,12 +681,7 @@
               api
                 .post('/api/v1/camera/calibrate', {
                   id: _this.currentCamera.id, // 相机ID
-                  checkerboard: data.field, // 相机标定数据
-                  images: [
-                    'd:/temp/1.bmp', // 图片路径, 本地路径或URL
-                    'd:/temp/2.bmp',
-                    'd:/temp/3.bmp'
-                  ]
+                  checkerboard: data.field // 相机标定数据
                 })
                 .then(res => {
                   if (res.status === 1) {
@@ -824,7 +834,7 @@
           } else {
             // Tips: 正式版调用以下接口
             api
-              .get(`/assets/dataset/frame-url.json`) // 正式接口: /api/v1/camera/${id}/get-frame
+              .get(`/api/v1/camera/${id}/get-frame`) // 正式接口: /api/v1/camera/${id}/get-frame
               .then(res => {
                 img = new Image()
                 img.src = res.data.frameurl
@@ -852,7 +862,7 @@
         getCameraInfo(id) {
           const _this = this
           api
-            .get('/assets/dataset/camera-info.json') // 正式接口: /api/v1/camera/{ID}/get-info
+            .get(`/api/v1/camera/${id}/get-info`) // 正式接口: /api/v1/camera/{ID}/get-info
             .then(res => {
               if (res.status === 1) {
                 _this.cameraInfo = res.data
@@ -867,7 +877,7 @@
         getCameraMarkers(id) {
           const _this = this
           api
-            .get('/assets/dataset/markers.json') // 正式接口: /api/v1/camera/{ID}/list-markers
+            .get(`/api/v1/camera/${id}/list-markers`) // 正式接口: /api/v1/camera/{ID}/list-markers
             .then(res => {
               if (res.status === 1) {
                 _this.markers = res.data.markers
@@ -915,6 +925,7 @@
             layer.open({
               type: 1,
               title: '初始化设置',
+              area: '800px',
               content: $('#layerInit'), //这里content是一个DOM，注意：最好该元素存放在body最外层，否则可能被其它的相对元素所影响
               success: function (layero, index) {
                 form.val('formInitConfig', {
@@ -991,7 +1002,7 @@
           }
 
           api
-            .get('/assets/dataset/checked-result.json') // 正式接口: /api/v1/camera/{ID}/get-timed-check-result
+            .get(`/api/v1/camera/${id}/get-timed-check-result`) // 正式接口: /api/v1/camera/{ID}/get-timed-check-result
             .then(res => {
               if (res.status === 1) {
                 console.log('res', res)

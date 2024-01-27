@@ -219,7 +219,14 @@ body {
 }
 
 .form-init {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
   margin: 15px 20px 0;
+}
+.form-init .layui-form-item {
+  flex-basis: 50%;
 }
 
 /* 实时数据 */

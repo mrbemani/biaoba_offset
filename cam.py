@@ -1,4 +1,3 @@
-# -- coding: utf-8 --
 
 import sys
 import os
@@ -141,14 +140,22 @@ def get_camera_list(return_json=False):
             strModeName = strModeName + chr(per)
         print ("device model name: %s" % strModeName)
 
+        serial_number = ""
+        for per in mvcc_dev_info.SpecialInfo.stGigEInfo.chSerialNumber:
+            if per == 0:
+                break
+            serial_number = serial_number + chr(per)
+        print ("serial number: %s" % serial_number)
+
         nip1 = ((mvcc_dev_info.SpecialInfo.stGigEInfo.nCurrentIp & 0xff000000) >> 24)
         nip2 = ((mvcc_dev_info.SpecialInfo.stGigEInfo.nCurrentIp & 0x00ff0000) >> 16)
         nip3 = ((mvcc_dev_info.SpecialInfo.stGigEInfo.nCurrentIp & 0x0000ff00) >> 8)
         nip4 = (mvcc_dev_info.SpecialInfo.stGigEInfo.nCurrentIp & 0x000000ff)
         cam_info = dict(
-            id = i,
+            idx = i,
+            id = serial_number,
             name = strModeName,
-            ip = f"{nip1}.{nip2}.{nip3}.{nip4}"
+            ip = f"{nip1}.{nip2}.{nip3}.{nip4}",
         )
         print ("current ip: %d.%d.%d.%d\n" % (nip1, nip2, nip3, nip4))
         camera_info_list.append(cam_info)
@@ -213,16 +220,37 @@ def init_camera(deviceList: any, cameraIdx: int, exposureTime: float = 2000.0, p
     return cam
 
 
-def set_camera_params(cam: any, exposureTime: float = 2000.0):
+def set_camera_params(cam: any, exposureTime: float = 2000.0, gain: float = -9999.0):
     ret = cam.MV_CC_SetEnumValue("ExposureAuto", 0)
     time.sleep(0.2)
     ret = cam.MV_CC_SetFloatValue("ExposureTime", exposureTime)
     if ret != 0:
         print ("set ExposureTime fail! ret[0x%x]" % ret)
         return ret
-    
+
+    if gain > -9999.0:
+        ret = cam.MV_CC_SetFloatValue("Gain", float(gain))
+        if ret != 0:
+            print("set Gain fail! ret[0x%x]" % ret)
+            return ret
+
     return 0
 
+def set_camera_exposure(cam: any, exposureTime: float):
+    ret = cam.MV_CC_SetEnumValue("ExposureAuto", 0)
+    time.sleep(0.2)
+    ret = cam.MV_CC_SetFloatValue("ExposureTime", exposureTime)
+    if ret != 0:
+        print ("set ExposureTime fail! ret[0x%x]" % ret)
+        return ret
+    return 0
+
+def set_camera_gain(cam: any, gain: float):
+    ret = cam.MV_CC_SetFloatValue("Gain", float(gain))
+    if ret != 0:
+        print("set Gain fail! ret[0x%x]" % ret)
+        return ret
+    return 0
 
 def start_camera(cam: any, autoGrab: bool = True):
     # ch:开始取流 | en:Start grab image
@@ -306,7 +334,7 @@ def Save_Bmp(cam, buf_save_image, st_frame_info, bLock=True):
     return ret
 
 
-def ts_start_camera(camera_idx:int = 0, exposure_time: float = 2000.0, pixelFormat: int = PixelType_Gvsp_Mono12):
+def ts_start_camera(camera_idx:int = 0, exposure_time: float = 2000.0, gain: float = 0.0, pixelFormat: int = PixelType_Gvsp_Mono12):
     global g_currentFrame, g_bExit, cam
 
     deviceList = MV_CC_DEVICE_INFO_LIST()

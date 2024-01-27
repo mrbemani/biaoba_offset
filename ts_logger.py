@@ -1,17 +1,26 @@
+# Description: This file contains the code to create a logger that will log to a file
+#              based on the log level. The log files will be rotated daily and will
+#              be kept for 5 days.
+# Author:      Mr.Bemani
+# Date:        2019-12-20
+# Usage:       from ts_logger import logger
+#              logger.debug('This is a debug message')
+#              logger.info('This is an info message')
+#              logger.warning('This is a warning message')
+#              logger.error('This is an error message')
+#              logger.critical('This is a critical message')
+#
+
+__author__ = 'Mr.Bemani'
+
 import logging
 from logging.handlers import TimedRotatingFileHandler
-import re
-import sys
-
-# Define a pattern to exclude from logs and stdout
-EXCLUDE_PATTERN = re.compile(r'secret|password', re.IGNORECASE)
-PRINT_PATTERN = re.compile(r'print|save', re.IGNORECASE)
 
 # Function to create a handler for a specific log level and file
 def create_handler(filename, level):
     handler = TimedRotatingFileHandler(filename, when='midnight', interval=1, backupCount=5)
     handler.setLevel(level)
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('%(asctime)s - [%(levelname)s]: %(message)s')
     handler.setFormatter(formatter)
     return handler
 
@@ -31,20 +40,3 @@ handlers = {
 # Add handlers to the logger
 for handler in handlers.values():
     logger.addHandler(handler)
-
-# Override the built-in print function
-python_original_print = print
-def print(*args, **kwargs):
-    # Convert all arguments to string and concatenate them
-    message = ' '.join(map(str, args))
-    # Check if the message contains the excluded pattern
-    if not EXCLUDE_PATTERN.search(message):
-        # If it doesn't contain the pattern, log the message and print it
-        if PRINT_PATTERN.search(message):
-            python_original_print(message, **kwargs)
-        else:
-            logger.info(message)  # Adjust the logging level if necessary
-    # If the pattern is found, neither log nor print the message
-
-sys.stdout.write = print
-

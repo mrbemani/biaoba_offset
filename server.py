@@ -6,17 +6,24 @@ import argparse
 import threading
 from flask import Flask, jsonify, request, render_template, redirect, url_for, send_from_directory
 from flask_cors import CORS
-import cam
+import appfuncs as af
 
+try:
+    import cam
+except:
+    print ("using fake camera!!!")
+    import cam_mockup as cam
+
+from ts_logger import logger
+import persist as pst
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///records.sqlite3'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
-app.config['JSONIFY_MIMETYPE'] = 'application/json;charset=utf-8'
-
 CORS(app)
-db.init_app(app)
+
+SYS_TEMP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tmp")
+# get system temp dir
+if not os.path.exists(SYS_TEMP_DIR):
+    os.makedirs(SYS_TEMP_DIR)
 
 
 @app.route('/', methods=['GET'])
@@ -29,52 +36,133 @@ def send_assets(path):
 
 @app.route('/api/v1/camera/list', methods=['GET'])
 def get_camera_list():
-    cameras, ret, num_devices = cam.get_camera_list(return_json=True)
+    logger.debug('Getting camera list')
+    cameras, ret, num_devices = cam.get_camera_list(return_json=True) 
     if not ret:
         return jsonify(status=0, data={"cameras": []})
     if num_devices == 0:
         return jsonify(status=1, data={"cameras": []})
-    print (cameras)
+    logger.debug(f'Found {num_devices} camera(s)')
+    for camera in cameras:
+        camera['name'] = f'New Camera {camera["id"]}' if 'name' not in camera else camera['name']
+        camera['ip'] = None if 'ip' not in camera else camera['ip']
+        camera['settings'] = {} if 'settings' not in camera else camera['settings']
+        camera['intrinsics'] = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0] if 'intrinsics' not in camera else camera['intrinsics']
+        camera['distortion'] = [1.0, 0.0, 0.0, 0.0, 0.0] if 'distortion' not in camera else camera['distortion']
+        camera['new'] = 1
+        if camera['id'] in pst.settings['cameras']:
+            if camera['ip'] == pst.settings['cameras'][camera['id']]['ip']:
+                camera.update(pst.settings['cameras'][camera['id']])
+                camera['new'] = 0
+            
     return jsonify(status=1, data={"cameras": cameras})
 
-@app.route('/api/v1/camera/<int:camera_id>/get-frame', methods=['GET'])
+@app.route('/api/v1/camera/<string:camera_id>/get-frame', methods=['GET'])
 def get_camera_frame(camera_id):
     # Implement logic to return the camera frame
-    pass
+    data = {"frameurl": f"/get-camera-frame/{camera_id}.bmp"}
+    return jsonify(status=1, data=data)
 
-@app.route('/api/v1/camera/<int:camera_id>/get-info', methods=['GET'])
+
+@app.route('/get-camera-frame/<string:camera_id>.bmp')
+def get_camera_frame_jpg(camera_id):
+    logger.debug(f'Getting frame for camera {camera_id}')
+    return send_from_directory('frames', f'{camera_id}.bmp')
+
+
+@app.route('/api/v1/camera/<string:camera_id>/get-info', methods=['GET'])
 def get_camera_info(camera_id):
     # Implement logic to return camera info
-    pass
+    logger.debug(f'Getting info for camera {camera_id}')
+    cam_info = dict(id=camera_id, name="", ip="", settings=[], intrinsics=[], distortion=[])
+    if camera_id in pst.settings['cameras']:
+        cam_info.update(pst.settings['cameras'][camera_id])
+    if "markers" in cam_info:
+        del cam_info["markers"]
+    return jsonify(status=1, data=cam_info)
+
 
 @app.route('/api/v1/camera/set', methods=['POST'])
 def set_camera():
-    # Implement logic to set camera parameters
-    pass
+    req_data = request.get_json()
+    logger.debug(f'Setting camera {req_data["id"]}')
+    cam_id = req_data['id']
+    if 'set' in req_data:
+        for k in req_data['set']:
+            if k == 'name':
+                pst.settings['cameras'][cam_id]['name'] = req_data['set']['name']
+            else:
+                if k in ['pitch', 'yaw', 'roll', 'x', 'y', 'z', 'gain', 'exposure']:
+                    pst.settings['cameras'][cam_id]['settings'][k] = float(req_data['set'][k])
+                    if k == 'exposure':
+                        cam.set_camera_exposure(cam_id, float(req_data['set'][k]))
+                    elif k == 'gain':
+                        cam.set_camera_gain(cam_id, float(req_data['set'][k]))
+                else:
+                    pst.settings['cameras'][cam_id]['settings'][k] = req_data['set'][k]
+        pst.save_settings()
+    return jsonify(status=1, data={})
 
 @app.route('/api/v1/camera/calibrate', methods=['POST'])
 def calibrate_camera():
-    # Implement logic for camera calibration
-    pass
+    print (request.get_json())
+    return jsonify(status=1, data={})
 
-@app.route('/api/v1/camera/<int:camera_id>/list-markers', methods=['GET'])
+@app.route('/api/v1/camera/<string:camera_id>/list-markers', methods=['GET'])
 def list_markers(camera_id):
-    # Implement logic to list markers
-    pass
+    if camera_id not in pst.settings['cameras']:
+        return jsonify(status=0, data={"markers": []})
+    if 'markers' not in pst.settings['cameras'][camera_id]:
+        pst.settings['cameras'][camera_id]['markers'] = []
+        pst.save_settings()
+    ret_markers = []
+    for marker in pst.settings['cameras'][camera_id]['markers']:
+        ret_markers.append(pst.settings['cameras'][camera_id]['markers'][marker])
+    return jsonify(status=1, data={"markers": ret_markers})
 
-@app.route('/api/v1/camera/<int:camera_id>/set-markers', methods=['POST'])
+@app.route('/api/v1/camera/<string:camera_id>/set-markers', methods=['POST'])
 def set_markers(camera_id):
-    # Implement logic to set markers
-    pass
+    if 'markers' not in request.get_json():
+        return jsonify(status=0, data="invalid request")
+    markers = request.get_json()['markers']
+    if camera_id not in pst.settings['cameras']:
+        return jsonify(status=0, data="invalid camera id")
+    pst.settings['cameras'][camera_id]['markers'] = dict()
+    for marker in markers:
+        mk_obj = dict(
+            id=marker['id'], 
+            name=marker['name'], 
+            type=marker['type'],
+            position=[float(x) for x in marker['position'].split(',')],
+            rotation=[float(x) for x in marker['rotation'].split(',')],
+            size=float(marker['size']),
+            roi=[float(x) for x in marker['roi'].split(',')],
+        )
+        pst.settings['cameras'][camera_id]['markers'][marker['id']] = mk_obj
+    pst.save_settings()
+    return jsonify(status=1, data={})
 
 @app.route('/api/v1/camera/capture-reference-image', methods=['POST'])
 def capture_reference_image():
-    # Implement logic for capturing reference image
-    pass
+    req = request.get_json()
+    sample_num = 20
+    save_path = os.path.join(SYS_TEMP_DIR, "capture", "reference", str(req['camera_id']).strip().replace("-", "_").replace("/", "_"))
+    if 'camera' not in req:
+        return jsonify(status=0, data="invalid request")
+    camera_id = req['camera']
+    if camera_id not in pst.settings['cameras']:
+        return jsonify(status=0, data="invalid camera id")
+    if 'sample' in req:
+        sample_num = int(req['sample'])
+    af.get_image(os.path.join("offsets", str(camera_id), "base_image.bmp"), sample_num)
+    return jsonify(status=1, data={})
+    
 
 @app.route('/api/v1/camera/check-offset', methods=['POST'])
 def check_offset():
     # Implement logic to check offset
+
+    
     pass
 
 @app.route('/api/v1/camera/set-timed-check', methods=['POST'])
@@ -87,26 +175,36 @@ def cancel_timed_check():
     # Implement logic to cancel timed check
     pass
 
-@app.route('/api/v1/camera/<int:camera_id>/get-timed-check', methods=['GET'])
+@app.route('/api/v1/camera/<string:camera_id>/get-timed-check', methods=['GET'])
 def get_timed_check(camera_id):
     # Implement logic to get timed check status
     pass
 
-@app.route('/api/v1/camera/<int:camera_id>/get-timed-check-result', methods=['GET'])
+@app.route('/api/v1/camera/<string:camera_id>/get-timed-check-result', methods=['GET'])
 def get_timed_check_result(camera_id):
-    # Implement logic to get timed check results
-    pass
+    pst.load_offset_data(camera_id)
+    
 
 @app.route('/api/v1/remote-server/set', methods=['POST'])
 def set_remote_server():
-    # Implement logic to set remote server
-    pass
+    pst.settings['remote_server'] = request.get_json()
+    return jsonify(status=1, data={})
 
 @app.route('/api/v1/remote-server/get', methods=['GET'])
 def get_remote_server():
-    # Implement logic to get remote server info
-    pass
+    return jsonify(status=1, data=pst.settings['remote_server'])
 
 if __name__ == '__main__':
-    threading.Thread(target=cam.ts_start_camera, args=(0, 5000.0), daemon=True).start()
+    pst.load_settings()
+    device_list, ret, deviceNum = cam.get_camera_list(return_json=True)
+
+    if deviceNum > 0:
+        for device in device_list:
+            if device['id'] in pst.settings['cameras']:
+                if device['ip'] == pst.settings['cameras'][device['id']]['ip']:
+                    device.update(pst.settings['cameras'][device['id']])
+                    device['new'] = 0
+            if "settings" not in device:
+                device['settings'] = {"exposure": 1000.0}
+            threading.Thread(target=cam.ts_start_camera, args=(device['id'], device['settings']['exposure']), daemon=True).start()
     app.run(debug=True)
