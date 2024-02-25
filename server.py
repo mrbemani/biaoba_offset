@@ -26,6 +26,11 @@ if not os.path.exists(SYS_TEMP_DIR):
     os.makedirs(SYS_TEMP_DIR)
 
 
+@app.route('/debug/get/settings', methods=['GET'])
+def debug_get_settings():
+    return jsonify(status=1, data=pst.settings)
+
+
 @app.route('/', methods=['GET'])
 def index():
     return send_from_directory('webui', 'index.html')
@@ -148,14 +153,14 @@ def capture_reference_image():
     req = request.get_json()
     print (req)
     sample_num = 20
-    save_path = os.path.join(SYS_TEMP_DIR, "capture", "reference", str(req['camera_id']).strip().replace("-", "_").replace("/", "_"))
-    if 'camera' not in req:
+    if 'id' not in req:
         return jsonify(status=0, data="invalid request")
-    camera_id = req['camera']
+    save_path = os.path.join(SYS_TEMP_DIR, "capture", "reference", str(req['id']).strip().replace("-", "_").replace("/", "_"))
+    camera_id = req['id']
     if camera_id not in pst.settings['cameras']:
         return jsonify(status=0, data="invalid camera id")
-    if 'sample' in req:
-        sample_num = int(req['sample'])
+    if 'sampleNumber' in req:
+        sample_num = int(req['sampleNumber'])
     af.get_image(os.path.join("offsets", str(camera_id), "base_image.bmp"), sample_num)
     return jsonify(status=1, data={})
     

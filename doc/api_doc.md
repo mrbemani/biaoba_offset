@@ -146,7 +146,7 @@ POST /api/v1/camera/set
 
 ```json
 {
-    "id": 1,                // 相机ID
+    "id": "camera_id",                // 相机ID
     "set": {
         "name": "camera_1",     // 相机名称
         "yaw": 0.0,             // 相机偏航角 (rad)
