@@ -200,6 +200,7 @@ if __name__ == '__main__':
 
     if deviceNum > 0:
         for device in device_list:
+            print ("load device: ", device)
             if device['id'] in pst.settings['cameras']:
                 if device['ip'] == pst.settings['cameras'][device['id']]['ip']:
                     device.update(pst.settings['cameras'][device['id']])
