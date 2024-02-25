@@ -87,6 +87,7 @@ def set_camera():
     req_data = request.get_json()
     logger.debug(f'Setting camera {req_data["id"]}')
     cam_id = req_data['id']
+    logger.debug(f'req_data: \n{req_data}')
     if 'set' in req_data:
         for k in req_data['set']:
             if k == 'name':
