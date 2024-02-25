@@ -197,7 +197,7 @@ def get_remote_server():
 if __name__ == '__main__':
     pst.load_settings()
     device_list, ret, deviceNum = cam.get_camera_list(return_json=True)
-
+    print ("after get camera list")
     if deviceNum > 0:
         for device in device_list:
             print ("load device: ", device)
