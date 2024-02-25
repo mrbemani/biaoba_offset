@@ -145,6 +145,7 @@ def set_markers(camera_id):
 @app.route('/api/v1/camera/capture-reference-image', methods=['POST'])
 def capture_reference_image():
     req = request.get_json()
+    print (req)
     sample_num = 20
     save_path = os.path.join(SYS_TEMP_DIR, "capture", "reference", str(req['camera_id']).strip().replace("-", "_").replace("/", "_"))
     if 'camera' not in req:
