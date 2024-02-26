@@ -89,6 +89,7 @@ def get_camera_info(camera_id):
 
 @app.route('/api/v1/camera/set', methods=['POST'])
 def set_camera():
+    print (request.get_json())
     req_data = request.get_json()
     logger.debug(f'Setting camera {req_data["id"]}')
     cam_id = req_data['id']
