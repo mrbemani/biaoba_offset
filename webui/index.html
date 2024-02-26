@@ -699,6 +699,7 @@
               console.log('currentCamera', _this.currentCamera)
               const settings = _this.cameraInfo.settings
               settings.name = data.field.name
+              console.log('settings', settings)
               api
                 .post('/api/v1/camera/set', {
                   id: _this.currentCamera.id, // 相机ID
