@@ -697,7 +697,7 @@
             // 监听【相机设置】的提交
             form.on('submit(formSubmitCameraSet)', function (data) {
               console.log('currentCamera', _this.currentCamera)
-              const settings = _this.cameraInfo.settings
+              let settings = _this.cameraInfo.settings
               settings.name = data.field.name
               console.log('settings', settings)
               api
@@ -706,6 +706,7 @@
                   set: settings
                 })
                 .then(res => {
+                  console.log('settings', settings)
                   layer.msg('相机设置完成', { icon: 1 })
                 })
                 .catch(err => {
