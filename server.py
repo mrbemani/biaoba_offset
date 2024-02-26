@@ -94,19 +94,19 @@ def set_camera():
     logger.debug(f'Setting camera {req_data["id"]}')
     cam_id = req_data['id']
     logger.debug(f'req_data: \n{req_data}')
-    if 'set' in req_data:
-        for k in req_data['set']:
+    if 'settings' in req_data:
+        for k in req_data['settings']:
             if k == 'name':
-                pst.settings['cameras'][cam_id]['name'] = req_data['set']['name']
+                pst.settings['cameras'][cam_id]['name'] = req_data['settings']['name']
             else:
                 if k in ['pitch', 'yaw', 'roll', 'x', 'y', 'z', 'gain', 'exposure']:
-                    pst.settings['cameras'][cam_id]['settings'][k] = float(req_data['set'][k])
+                    pst.settings['cameras'][cam_id]['settings'][k] = float(req_data['settings'][k])
                     if k == 'exposure':
-                        cam.set_camera_exposure(cam_id, float(req_data['set'][k]))
+                        cam.set_camera_exposure(cam_id, float(req_data['settings'][k]))
                     elif k == 'gain':
-                        cam.set_camera_gain(cam_id, float(req_data['set'][k]))
+                        cam.set_camera_gain(cam_id, float(req_data['settings'][k]))
                 else:
-                    pst.settings['cameras'][cam_id]['settings'][k] = req_data['set'][k]
+                    pst.settings['cameras'][cam_id]['settings'][k] = req_data['settings'][k]
         pst.save_settings()
     return jsonify(status=1, data={})
 

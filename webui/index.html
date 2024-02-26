@@ -703,7 +703,7 @@
               api
                 .post('/api/v1/camera/set', {
                   id: _this.currentCamera.id, // 相机ID
-                  set: settings
+                  settings: settings
                 })
                 .then(res => {
                   console.log('settings', settings)
