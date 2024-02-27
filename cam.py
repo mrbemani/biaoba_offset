@@ -42,6 +42,7 @@ if not os.path.exists(TMP_DIR):
     os.makedirs(TMP_DIR)
 
 cam = 0
+cameras = dict()
 
 MONO8 = 17301505
 MONO12 = 17825797
@@ -236,7 +237,8 @@ def set_camera_params(cam: any, exposureTime: float = 2000.0, gain: float = -999
 
     return 0
 
-def set_camera_exposure(cam: any, exposureTime: float):
+def set_camera_exposure(cam_id: str, exposureTime: float):
+    cam = camera
     ret = cam.MV_CC_SetEnumValue("ExposureAuto", 0)
     time.sleep(0.2)
     ret = cam.MV_CC_SetFloatValue("ExposureTime", exposureTime)
@@ -245,7 +247,7 @@ def set_camera_exposure(cam: any, exposureTime: float):
         return ret
     return 0
 
-def set_camera_gain(cam: any, gain: float):
+def set_camera_gain(cam_id: str, gain: float):
     ret = cam.MV_CC_SetFloatValue("Gain", float(gain))
     if ret != 0:
         print("set Gain fail! ret[0x%x]" % ret)
@@ -464,7 +466,7 @@ def ts_start_camera(camera_idx:int = 0, exposure_time: float = 2000.0, gain: flo
 
 if __name__ == "__main__":
     # test case
-    threading.Thread(target=ts_start_camera, args=(0, 2000000.0), daemon=True).start()
+    threading.Thread(target=ts_start_camera, args=(0, 2000.0), daemon=True).start()
     frame = None
     while True:
         _frm = getCurrentFrame()
