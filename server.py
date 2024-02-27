@@ -96,7 +96,7 @@ def set_camera():
     logger.debug(f'req_data: \n{req_data}')
     if 'settings' in req_data:
         if cam_id not in pst.settings['cameras']:
-            pst.settings['cameras'][cam_id] = dict()
+            pst.settings['cameras'][cam_id] = dict(settings=dict())
         for k in req_data['settings']:
             if k == 'name':
                 pst.settings['cameras'][cam_id]['name'] = req_data['settings']['name']
