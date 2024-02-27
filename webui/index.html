@@ -131,7 +131,8 @@
                       lay-verify="required"
                       placeholder="请输入相机编号"
                       autocomplete="off"
-                      class="layui-input"
+                      class="layui-input" 
+                      disabled="disabled"
                     />
                   </div>
                 </div>
@@ -706,7 +707,8 @@
                   gain: _this.cameraInfo.settings.gain,
                   pitch: _this.cameraInfo.settings.pitch,
                   roll: _this.cameraInfo.settings.roll,
-                  yaw: _this.cameraInfo.settings.yaw
+                  yaw: _this.cameraInfo.settings.yaw,
+                  name: data.field.name
                 }
               }
               api
