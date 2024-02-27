@@ -110,6 +110,7 @@ def set_camera():
                 else:
                     pst.settings['cameras'][cam_id]['settings'][k] = req_data['settings'][k]
         pst.save_settings()
+        print (pst.settings)
     return jsonify(status=1, data={})
 
 @app.route('/api/v1/camera/calibrate', methods=['POST'])
