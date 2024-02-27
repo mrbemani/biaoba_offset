@@ -41,7 +41,7 @@ TMP_DIR = "./tmp/" #os.environ.get('TEMP') or "./tmp/"
 if not os.path.exists(TMP_DIR):
     os.makedirs(TMP_DIR)
 
-cam = 0
+
 cameras = dict()
 
 MONO8 = 17301505
@@ -52,13 +52,13 @@ nSaveNum = 0
 savedFiles = []
 
 # 为线程定义一个函数
-def work_thread(cam=0):
+def work_thread(cam):
     global bSaveBmp, nSaveNum
     stOutFrame = MV_FRAME_OUT()
     memset(byref(stOutFrame), 0, sizeof(stOutFrame))
     while True:
         #print("start capture ...", end='')
-        ret = cam.MV_CC_GetImageBuffer(stOutFrame, 1000)
+        ret = cam['device'].MV_CC_GetImageBuffer(stOutFrame, 1000)
         #print("ok")
         if None != stOutFrame.pBufAddr and 0 == ret:
             # get cv2 image
@@ -114,7 +114,22 @@ def getCurrentFrame():
     return frame
 
 
-def get_camera_list(return_json=False):
+def get_camera_list(return_json=False, force_search=False):
+    global cameras
+    if len(cameras) > 0 and not force_search:
+        ret_list = []
+        for cam in cameras:
+            ret_list.append(dict(
+                idx = cam['idx'],
+                id = cam['id'],
+                name = cam['name'],
+                ip = cam['ip']
+            ))
+        return ret_list, True, len(ret_list)
+
+    if force_search:
+        cameras.clear() 
+
     deviceList = MV_CC_DEVICE_INFO_LIST()
     tlayerType = MV_GIGE_DEVICE
     
@@ -158,8 +173,11 @@ def get_camera_list(return_json=False):
             name = strModeName,
             ip = f"{nip1}.{nip2}.{nip3}.{nip4}",
         )
+        cameras[serial_number] = cam_info
+        cameras[serial_number]['device'] = mvcc_dev_info
         print ("current ip: %d.%d.%d.%d\n" % (nip1, nip2, nip3, nip4))
         camera_info_list.append(cam_info)
+    
     
     if return_json:
         return camera_info_list, True, deviceList.nDeviceNum
@@ -238,7 +256,9 @@ def set_camera_params(cam: any, exposureTime: float = 2000.0, gain: float = -999
     return 0
 
 def set_camera_exposure(cam_id: str, exposureTime: float):
-    cam = camera
+    if cam_id not in cameras:
+        return -1
+    cam = cameras[cam_id]['device']
     ret = cam.MV_CC_SetEnumValue("ExposureAuto", 0)
     time.sleep(0.2)
     ret = cam.MV_CC_SetFloatValue("ExposureTime", exposureTime)
@@ -313,7 +333,7 @@ def Save_Bmp(cam, buf_save_image, st_frame_info, bLock=True):
     if bLock is True:
         g_rclock.acquire()
 
-    file_path = os.path.join(TMP_DIR, str(st_frame_info.nFrameNum) + ".bmp")
+    file_path = os.path.join(TMP_DIR, cam['id'], str(st_frame_info.nFrameNum) + ".bmp")
     c_file_path = file_path.encode('ascii')
 
     stSaveParam = MV_SAVE_IMAGE_TO_FILE_PARAM_EX()
@@ -326,7 +346,7 @@ def Save_Bmp(cam, buf_save_image, st_frame_info, bLock=True):
     stSaveParam.nQuality = 9
     stSaveParam.pcImagePath = create_string_buffer(c_file_path)
     stSaveParam.iMethodValue = 2
-    ret = cam.MV_CC_SaveImageToFileEx(stSaveParam)
+    ret = cam['device'].MV_CC_SaveImageToFileEx(stSaveParam)
 
     savedFiles.append(file_path)
 
@@ -336,8 +356,8 @@ def Save_Bmp(cam, buf_save_image, st_frame_info, bLock=True):
     return ret
 
 
-def ts_start_camera(camera_idx:int = 0, exposure_time: float = 2000.0, gain: float = 0.0, pixelFormat: int = PixelType_Gvsp_Mono12):
-    global g_currentFrame, g_bExit, cam
+def ts_start_camera(camera_id: str, exposure_time: float = 2000.0, gain: float = 0.0, pixelFormat: int = PixelType_Gvsp_Mono12):
+    global g_currentFrame, g_bExit, cameras
 
     deviceList = MV_CC_DEVICE_INFO_LIST()
     tlayerType = MV_GIGE_DEVICE | MV_USB_DEVICE
@@ -370,7 +390,7 @@ def ts_start_camera(camera_idx:int = 0, exposure_time: float = 2000.0, gain: flo
         nip4 = (mvcc_dev_info.SpecialInfo.stGigEInfo.nCurrentIp & 0x000000ff)
         print ("current ip: %d.%d.%d.%d\n" % (nip1, nip2, nip3, nip4))
         
-    nConnectionNum = camera_idx # found camera index
+    nConnectionNum = cameras[camera_id]['idx'] # found camera index
 
     if int(nConnectionNum) >= deviceList.nDeviceNum:
         print ("intput error!")
@@ -463,21 +483,3 @@ def ts_start_camera(camera_idx:int = 0, exposure_time: float = 2000.0, gain: flo
         print ("destroy handle fail! ret[0x%x]" % ret)
         sys.exit()
 
-
-if __name__ == "__main__":
-    # test case
-    threading.Thread(target=ts_start_camera, args=(0, 2000.0), daemon=True).start()
-    frame = None
-    while True:
-        _frm = getCurrentFrame()
-        if _frm is not None:
-            frame = _frm.copy()
-        if frame is not None:
-            img_scaled = cv2.normalize(frame, dst=None, alpha=0, beta=65535, norm_type=cv2.NORM_MINMAX)
-            cv2.imshow("frame", img_scaled)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            g_bExit = True
-            time.sleep(0.5)
-            break
-    cv2.destroyAllWindows()
-    sys.exit()

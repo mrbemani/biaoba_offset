@@ -217,6 +217,8 @@ if __name__ == '__main__':
                     device.update(pst.settings['cameras'][device['id']])
                     device['new'] = 0
             if "settings" not in device:
-                device['settings'] = {"exposure": 1000.0}
+                device['settings'] = {"exposure": 1000.0, "gain": 0, 
+                                      "pitch": 0, "roll": 0, "yaw": 0, 
+                                      "x": 0, "y": 0, "z": 0}
             threading.Thread(target=cam.ts_start_camera, args=(device['id'], device['settings']['exposure']), daemon=True).start()
     app.run(debug=True)
