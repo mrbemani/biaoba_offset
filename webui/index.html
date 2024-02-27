@@ -700,13 +700,18 @@
               let settings = _this.cameraInfo.settings
               settings.name = data.field.name
               const camera_set_post_data = {
-                  id: _this.currentCamera.id, // 相机ID
-                  settings: settings
+                id: _this.currentCamera.id, // 相机ID
+                settings: {
+                  exposure: _this.cameraInfo.settings.exposure,
+                  gain: _this.cameraInfo.settings.gain,
+                  pitch: _this.cameraInfo.settings.pitch,
+                  roll: _this.cameraInfo.settings.roll,
+                  yaw: _this.cameraInfo.settings.yaw
+                }
               }
               api
                 .post('/api/v1/camera/set', camera_set_post_data)
                 .then(res => {
-                  console.log('camera_set_post_data', camera_set_post_data)
                   layer.msg('相机设置完成', { icon: 1 })
                 })
                 .catch(err => {
