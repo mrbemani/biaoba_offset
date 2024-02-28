@@ -2,6 +2,7 @@
 
 import sys
 import os
+import time
 import argparse
 import threading
 from flask import Flask, jsonify, request, render_template, redirect, url_for, send_from_directory
@@ -209,6 +210,7 @@ if __name__ == '__main__':
     pst.load_settings()
     device_list, ret, deviceNum = cam.get_camera_list(return_json=True)
     print ("after get camera list")
+    time.sleep(5)
     if deviceNum > 0:
         for device in device_list:
             print ("load device: ", device)

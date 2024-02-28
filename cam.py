@@ -379,7 +379,7 @@ def ts_start_camera(cam_id: str, exposure_time: float = 2000.0, gain: float = 0.
         sys.exit()
 
     try:
-        hThreadHandle = threading.Thread(target=work_thread, args=(cam,))
+        hThreadHandle = threading.Thread(target=work_thread, args=(cameras[cam_id],))
         cameras[cam_id]['workThread'] = hThreadHandle
         hThreadHandle.start()
     except:
