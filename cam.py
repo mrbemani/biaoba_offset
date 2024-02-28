@@ -75,9 +75,6 @@ def work_thread(cam):
             frame_len = stOutFrame.stFrameInfo.nFrameLen
             buf_image = None
             if bSaveBmp is True:
-                if len(cam['savedFiles']) >= nSaveNum:
-                    bSaveBmp = False
-                    print ("All Image Saved")
                 print ("Saving ... ")
                 if len(cam['savedFiles']) >= nSaveNum:
                     bSaveBmp = False
@@ -249,7 +246,7 @@ def start_camera(cam_id: str, autoGrab: bool = True):
     hThreadHandle = None
     if autoGrab:
         try:
-            hThreadHandle = threading.Thread(target=work_thread, args=(cameras[cam_id]['deviceHandle'],), daemon=True)
+            hThreadHandle = threading.Thread(target=work_thread, args=(cameras[cam_id],), daemon=True)
             hThreadHandle.start()
         except:
             print ("error: unable to start thread")
@@ -373,6 +370,7 @@ def ts_start_camera(cam_id: str, exposure_time: float = 2000.0, gain: float = 0.
         print ("set ExposureTime fail! ret[0x%x]" % ret)
         sys.exit()
     
+    """"""
     # ch:开始取流 | en:Start grab image
     ret = cam.MV_CC_StartGrabbing()
     if ret != 0:
