@@ -125,7 +125,8 @@ def get_camera_list(return_json=False, force_search=False):
     global cameras
     if len(cameras) > 0 and not force_search:
         ret_list = []
-        for cam in cameras:
+        for cam_id in cameras:
+            cam = cameras[cam_id]
             ret_list.append(dict(
                 idx = cam['idx'],
                 id = cam['id'],
