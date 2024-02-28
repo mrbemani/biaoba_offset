@@ -1,6 +1,7 @@
 
 import sys
 import os
+import atexit
 
 os_type = sys.platform
 import threading
@@ -33,7 +34,6 @@ sys.path.append(MvImport)
 from MvCameraControl_class import *
 
 g_bExit = False
-g_currentFrame = None
 g_rclock = threading.Lock()
 
 # get system temp directory
@@ -49,7 +49,18 @@ MONO12 = 17825797
 
 bSaveBmp = False
 nSaveNum = 0
-savedFiles = []
+
+
+def stop_all_cameras():
+    global g_bExit
+    g_bExit = True
+    for cam in cameras:
+        if 'deviceHandle' in cam:
+            ret = stop_camera(cam['id'])
+            ret = cam['deviceHandle'].MV_CC_CloseDevice()
+            ret = cam['deviceHandle'].MV_CC_DestroyHandle()
+            del cam['deviceHandle']
+
 
 # 为线程定义一个函数
 def work_thread(cam):
@@ -58,19 +69,17 @@ def work_thread(cam):
     memset(byref(stOutFrame), 0, sizeof(stOutFrame))
     while True:
         #print("start capture ...", end='')
-        ret = cam['device'].MV_CC_GetImageBuffer(stOutFrame, 1000)
+        ret = cam['deviceHandle'].MV_CC_GetImageBuffer(stOutFrame, 1000)
         #print("ok")
         if None != stOutFrame.pBufAddr and 0 == ret:
-            # get cv2 image
-            #print ("get one frame: Width[%d], Height[%d], enPixelType[0x%x]"  % (stOutFrame.stFrameInfo.nWidth, stOutFrame.stFrameInfo.nHeight, stOutFrame.stFrameInfo.enPixelType))
             frame_len = stOutFrame.stFrameInfo.nFrameLen
             buf_image = None
             if bSaveBmp is True:
-                if len(savedFiles) >= nSaveNum:
+                if len(cam['savedFiles']) >= nSaveNum:
                     bSaveBmp = False
                     print ("All Image Saved")
                 print ("Saving ... ")
-                if len(savedFiles) >= nSaveNum:
+                if len(cam['savedFiles']) >= nSaveNum:
                     bSaveBmp = False
                     print ("save image number enough!")
                 if stOutFrame.stFrameInfo.enPixelType == PixelType_Gvsp_Mono8:
@@ -82,11 +91,11 @@ def work_thread(cam):
                     cdll.msvcrt.memcpy(byref(buf_image), stOutFrame.pBufAddr, frame_len)
                 else:
                     libc.memcpy(byref(buf_image), stOutFrame.pBufAddr, frame_len)
-                Save_Bmp(cam, buf_image, stOutFrame.stFrameInfo, False)
-                if len(savedFiles) > 0:
-                    print (savedFiles[-1])
+                Save_Bmp(cam['id'], buf_image, stOutFrame.stFrameInfo, False)
+                if len(cam['savedFiles']) > 0:
+                    print (cam['savedFiles'][-1])
                 g_rclock.release()
-            nRet = cam.MV_CC_FreeImageBuffer(stOutFrame)
+            nRet = cam['deviceHandle'].MV_CC_FreeImageBuffer(stOutFrame)
             if buf_image is not None:
                 if os_type == 'win32':
                     del buf_image
@@ -98,18 +107,19 @@ def work_thread(cam):
             break
 
 
-def clear_saved_files():
-    if len(savedFiles) > 0:
-        for f in savedFiles:
+def clear_saved_files(camera_id: str):
+    global cameras
+    if len(cameras[camera_id]['savedFiles']) > 0:
+        for f in cameras[camera_id]['savedFiles']:
             os.remove(f)
-        savedFiles.clear()
+        cameras[camera_id]['savedFiles'].clear()
 
-def getCurrentFrame():
-    global g_currentFrame
+def getCurrentFrame(camera_id: str):
+    global cameras
     frame = None
     g_rclock.acquire()
-    if g_currentFrame is not None:
-        frame = g_currentFrame.copy()
+    if cameras[camera_id]['frame'] is not None:
+        frame = cameras[camera_id]['frame'].copy()
     g_rclock.release()
     return frame
 
@@ -173,8 +183,10 @@ def get_camera_list(return_json=False, force_search=False):
             name = strModeName,
             ip = f"{nip1}.{nip2}.{nip3}.{nip4}",
         )
-        cameras[serial_number] = cam_info
-        cameras[serial_number]['device'] = mvcc_dev_info
+        cameras[serial_number] = cam_info.copy()
+        cameras[serial_number]['deviceInfo'] = mvcc_dev_info
+        cameras[serial_number]['deviceHandle'] = MvCamera()
+        cameras[serial_number]['savedFiles'] = []
         print ("current ip: %d.%d.%d.%d\n" % (nip1, nip2, nip3, nip4))
         camera_info_list.append(cam_info)
     
@@ -185,61 +197,10 @@ def get_camera_list(return_json=False, force_search=False):
         return deviceList, True, deviceList.nDeviceNum
 
 
-def init_camera(deviceList: any, cameraIdx: int, exposureTime: float = 2000.0, pixelFormat: int = PixelType_Gvsp_Mono12):
-    nConnectionNum = cameraIdx # found camera index
-
-    if int(nConnectionNum) >= deviceList.nDeviceNum:
-        print ("intput error!")
-        return None, -1
-
-    # ch:创建相机实例 | en:Creat Camera Object
-    cam = MvCamera()
-
-    # ch:选择设备并创建句柄 | en:Select device and create handle
-    stDeviceList = cast(deviceList.pDeviceInfo[int(nConnectionNum)], POINTER(MV_CC_DEVICE_INFO)).contents
-    
-    ret = cam.MV_CC_CreateHandle(stDeviceList)
-    if ret != 0:
-        print ("create handle fail! ret[0x%x]" % ret)
-        return None, ret
-    
-    # ch:打开设备 | en:Open device
-    ret = cam.MV_CC_OpenDevice(MV_ACCESS_Exclusive, 0)
-    if ret != 0:
-        print ("open device fail! ret[0x%x]" % ret)
-        return None, ret
-    
-    # ch:探测网络最佳包大小(只对GigE相机有效) | en:Detection network optimal package size(It only works for the GigE camera)
-    if stDeviceList.nTLayerType == MV_GIGE_DEVICE:
-        nPacketSize = cam.MV_CC_GetOptimalPacketSize()
-        if int(nPacketSize) > 0:
-            ret = cam.MV_CC_SetIntValue("GevSCPSPacketSize",nPacketSize)
-            if ret != 0:
-                print ("Warning: Set Packet Size fail! ret[0x%x]" % ret)
-        else:
-            print ("Warning: Get Packet Size fail! ret[0x%x]" % nPacketSize)
-
-    stBool = c_bool(False)
-    ret =cam.MV_CC_GetBoolValue("AcquisitionFrameRateEnable", stBool)
-    if ret != 0:
-        print ("get AcquisitionFrameRateEnable fail! ret[0x%x]" % ret)
-    else:
-        print ("AcquisitionFrameRateEnable: %d" % stBool.value)
-    
-    ret = cam.MV_CC_SetEnumValue("TriggerMode", MV_TRIGGER_MODE_OFF)
-    if ret != 0:
-        print ("set trigger mode fail! ret[0x%x]" % ret)
-        return ret
-
-    ret = cam.MV_CC_SetEnumValue("PixelFormat", pixelFormat) #0x01100005
-    if ret != 0:
-        print ("set PixelFormat fail! ret[0x%x]" % ret)
-        return ret
-
-    return cam
-
-
-def set_camera_params(cam: any, exposureTime: float = 2000.0, gain: float = -9999.0):
+def set_camera_params(cam_id: str, exposureTime: float = 2000.0, gain: float = -9999.0):
+    if cam_id not in cameras:
+        return -1
+    cam = cameras[cam_id]['deviceHandle']
     ret = cam.MV_CC_SetEnumValue("ExposureAuto", 0)
     time.sleep(0.2)
     ret = cam.MV_CC_SetFloatValue("ExposureTime", exposureTime)
@@ -258,7 +219,7 @@ def set_camera_params(cam: any, exposureTime: float = 2000.0, gain: float = -999
 def set_camera_exposure(cam_id: str, exposureTime: float):
     if cam_id not in cameras:
         return -1
-    cam = cameras[cam_id]['device']
+    cam = cameras[cam_id]['deviceHandle']
     ret = cam.MV_CC_SetEnumValue("ExposureAuto", 0)
     time.sleep(0.2)
     ret = cam.MV_CC_SetFloatValue("ExposureTime", exposureTime)
@@ -268,15 +229,19 @@ def set_camera_exposure(cam_id: str, exposureTime: float):
     return 0
 
 def set_camera_gain(cam_id: str, gain: float):
-    ret = cam.MV_CC_SetFloatValue("Gain", float(gain))
+    if cam_id not in cameras:
+        return -1
+    ret = cameras[cam_id]['deviceHandle'].MV_CC_SetFloatValue("Gain", float(gain))
     if ret != 0:
         print("set Gain fail! ret[0x%x]" % ret)
         return ret
     return 0
 
-def start_camera(cam: any, autoGrab: bool = True):
+def start_camera(cam_id: str, autoGrab: bool = True):
+    if cam_id not in cameras:
+        return -1
     # ch:开始取流 | en:Start grab image
-    ret = cam.MV_CC_StartGrabbing()
+    ret = cameras[cam_id]['deviceHandle'].MV_CC_StartGrabbing()
     if ret != 0:
         print ("start grabbing fail! ret[0x%x]" % ret)
         return ret
@@ -284,7 +249,7 @@ def start_camera(cam: any, autoGrab: bool = True):
     hThreadHandle = None
     if autoGrab:
         try:
-            hThreadHandle = threading.Thread(target=work_thread, args=(cam,), daemon=True)
+            hThreadHandle = threading.Thread(target=work_thread, args=(cameras[cam_id]['deviceHandle'],), daemon=True)
             hThreadHandle.start()
         except:
             print ("error: unable to start thread")
@@ -292,14 +257,14 @@ def start_camera(cam: any, autoGrab: bool = True):
     return hThreadHandle
 
 
-def stop_camera(cam: any, cam_thread: threading.Thread):
+def stop_camera(cam_id: str):
     global g_bExit
     g_bExit = True
     time.sleep(0.5)
-    cam_thread.join(1.0)
+    cameras[cam_id]['workThread'].join(1.0)
 
     # ch:停止取流 | en:Stop grab image
-    ret = cam.MV_CC_StopGrabbing()
+    ret = cameras[cam_id]['deviceHandle'].MV_CC_StopGrabbing()
     if ret != 0:
         print ("stop grabbing fail! ret[0x%x]" % ret)
         return ret
@@ -346,9 +311,9 @@ def Save_Bmp(cam, buf_save_image, st_frame_info, bLock=True):
     stSaveParam.nQuality = 9
     stSaveParam.pcImagePath = create_string_buffer(c_file_path)
     stSaveParam.iMethodValue = 2
-    ret = cam['device'].MV_CC_SaveImageToFileEx(stSaveParam)
+    ret = cam['deviceHandle'].MV_CC_SaveImageToFileEx(stSaveParam)
 
-    savedFiles.append(file_path)
+    cam['savedFiles'].append(file_path)
 
     if bLock is True:
         g_rclock.release()
@@ -356,53 +321,16 @@ def Save_Bmp(cam, buf_save_image, st_frame_info, bLock=True):
     return ret
 
 
-def ts_start_camera(camera_id: str, exposure_time: float = 2000.0, gain: float = 0.0, pixelFormat: int = PixelType_Gvsp_Mono12):
-    global g_currentFrame, g_bExit, cameras
-
-    deviceList = MV_CC_DEVICE_INFO_LIST()
-    tlayerType = MV_GIGE_DEVICE | MV_USB_DEVICE
+def ts_start_camera(cam_id: str, exposure_time: float = 2000.0, gain: float = 0.0, pixelFormat: int = PixelType_Gvsp_Mono8):
+    global g_bExit, cameras
     
-    # ch:枚举设备 | en:Enum device
-    ret = MvCamera.MV_CC_EnumDevices(tlayerType, deviceList)
-    if ret != 0:
-        print ("enum devices fail! ret[0x%x]" % ret)
-        sys.exit()
-
-    if deviceList.nDeviceNum == 0:
-        print ("find no device!")
-        sys.exit()
-
-    print ("Find %d devices!" % deviceList.nDeviceNum)
-
-    for i in range(0, deviceList.nDeviceNum):
-        mvcc_dev_info = cast(deviceList.pDeviceInfo[i], POINTER(MV_CC_DEVICE_INFO)).contents
-        print ("\ngige device: [%d]" % i)
-        strModeName = ""
-        for per in mvcc_dev_info.SpecialInfo.stGigEInfo.chModelName:
-            if per == 0:
-                break
-            strModeName = strModeName + chr(per)
-        print ("device model name: %s" % strModeName)
-
-        nip1 = ((mvcc_dev_info.SpecialInfo.stGigEInfo.nCurrentIp & 0xff000000) >> 24)
-        nip2 = ((mvcc_dev_info.SpecialInfo.stGigEInfo.nCurrentIp & 0x00ff0000) >> 16)
-        nip3 = ((mvcc_dev_info.SpecialInfo.stGigEInfo.nCurrentIp & 0x0000ff00) >> 8)
-        nip4 = (mvcc_dev_info.SpecialInfo.stGigEInfo.nCurrentIp & 0x000000ff)
-        print ("current ip: %d.%d.%d.%d\n" % (nip1, nip2, nip3, nip4))
-        
-    nConnectionNum = cameras[camera_id]['idx'] # found camera index
-
-    if int(nConnectionNum) >= deviceList.nDeviceNum:
-        print ("intput error!")
-        sys.exit()
-
     # ch:创建相机实例 | en:Creat Camera Object
-    cam = MvCamera()
+    cam = cameras[cam_id]['deviceHandle']
     
     # ch:选择设备并创建句柄 | en:Select device and create handle
-    stDeviceList = cast(deviceList.pDeviceInfo[int(nConnectionNum)], POINTER(MV_CC_DEVICE_INFO)).contents
+    mv_device_info = cameras[cam_id]['deviceInfo']
 
-    ret = cam.MV_CC_CreateHandle(stDeviceList)
+    ret = cam.MV_CC_CreateHandle(mv_device_info)
     if ret != 0:
         print ("create handle fail! ret[0x%x]" % ret)
         sys.exit()
@@ -414,17 +342,16 @@ def ts_start_camera(camera_id: str, exposure_time: float = 2000.0, gain: float =
         sys.exit()
     
     # ch:探测网络最佳包大小(只对GigE相机有效) | en:Detection network optimal package size(It only works for the GigE camera)
-    if stDeviceList.nTLayerType == MV_GIGE_DEVICE:
-        nPacketSize = cam.MV_CC_GetOptimalPacketSize()
-        if int(nPacketSize) > 0:
-            ret = cam.MV_CC_SetIntValue("GevSCPSPacketSize",nPacketSize)
-            if ret != 0:
-                print ("Warning: Set Packet Size fail! ret[0x%x]" % ret)
-        else:
-            print ("Warning: Get Packet Size fail! ret[0x%x]" % nPacketSize)
+    nPacketSize = cam.MV_CC_GetOptimalPacketSize()
+    if int(nPacketSize) > 0:
+        ret = cam.MV_CC_SetIntValue("GevSCPSPacketSize", nPacketSize)
+        if ret != 0:
+            print ("Warning: Set Packet Size fail! ret[0x%x]" % ret)
+    else:
+        print ("Warning: Get Packet Size fail! ret[0x%x]" % nPacketSize)
 
     stBool = c_bool(False)
-    ret =cam.MV_CC_GetBoolValue("AcquisitionFrameRateEnable", stBool)
+    ret = cam.MV_CC_GetBoolValue("AcquisitionFrameRateEnable", stBool)
     if ret != 0:
         print ("get AcquisitionFrameRateEnable fail! ret[0x%x]" % ret)
 
@@ -434,7 +361,6 @@ def ts_start_camera(camera_id: str, exposure_time: float = 2000.0, gain: float =
         print ("set trigger mode fail! ret[0x%x]" % ret)
         sys.exit()
 
-    
     ret = cam.MV_CC_SetEnumValue("PixelFormat", pixelFormat) #0x01100005
     if ret != 0:
         print ("set PixelFormat fail! ret[0x%x]" % ret)
@@ -455,10 +381,13 @@ def ts_start_camera(camera_id: str, exposure_time: float = 2000.0, gain: float =
 
     try:
         hThreadHandle = threading.Thread(target=work_thread, args=(cam,))
+        cameras[cam_id]['workThread'] = hThreadHandle
         hThreadHandle.start()
     except:
         print ("error: unable to start thread")
         
+    atexit.register(stop_all_cameras)
+
     while g_bExit == False:
         time.sleep(0.01)
 
@@ -469,17 +398,14 @@ def ts_start_camera(camera_id: str, exposure_time: float = 2000.0, gain: float =
     ret = cam.MV_CC_StopGrabbing()
     if ret != 0:
         print ("stop grabbing fail! ret[0x%x]" % ret)
-        sys.exit()
 
     # ch:关闭设备 | Close device
     ret = cam.MV_CC_CloseDevice()
     if ret != 0:
         print ("close deivce fail! ret[0x%x]" % ret)
-        sys.exit()
 
     # ch:销毁句柄 | Destroy handle
     ret = cam.MV_CC_DestroyHandle()
     if ret != 0:
         print ("destroy handle fail! ret[0x%x]" % ret)
         sys.exit()
-

@@ -131,7 +131,7 @@
                       lay-verify="required"
                       placeholder="请输入相机编号"
                       autocomplete="off"
-                      class="layui-input" 
+                      class="layui-input"
                       readonly="readonly"
                     />
                   </div>
@@ -169,8 +169,8 @@
                 <div class="layui-form-item">
                   <label class="layui-form-label">基准相机</label>
                   <div class="layui-input-block">
-                    <input type="radio" name="standard" value="是" title="是" />
-                    <input type="radio" name="standard" value="否" title="否" checked />
+                    <input type="radio" name="standard" value="1" title="是" />
+                    <input type="radio" name="standard" value="0" title="否" checked />
                   </div>
                 </div>
 
@@ -697,18 +697,19 @@
 
             // 监听【相机设置】的提交
             form.on('submit(formSubmitCameraSet)', function (data) {
-              console.log('currentCamera', _this.currentCamera)
+              console.log('currentCamera', data)
               let settings = _this.cameraInfo.settings
               settings.name = data.field.name
               const camera_set_post_data = {
                 id: _this.currentCamera.id, // 相机ID
                 settings: {
-                  exposure: _this.cameraInfo.settings.exposure,
-                  gain: _this.cameraInfo.settings.gain,
-                  pitch: _this.cameraInfo.settings.pitch,
-                  roll: _this.cameraInfo.settings.roll,
-                  yaw: _this.cameraInfo.settings.yaw,
-                  name: data.field.name
+                  exposure: data.field.exposure,
+                  gain: data.field.gain,
+                  pitch: data.field.pitch,
+                  roll: data.field.roll,
+                  yaw: data.field.yaw,
+                  name: data.field.name,
+                  standard: data.field.standard // 是否是基准相机，0: 否， 1: 是
                 }
               }
               api
