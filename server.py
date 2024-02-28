@@ -108,6 +108,8 @@ def set_camera():
                         cam.set_camera_exposure(cam_id, float(req_data['settings'][k]))
                     elif k == 'gain':
                         cam.set_camera_gain(cam_id, float(req_data['settings'][k]))
+                elif k == 'standard':
+                    pst.settings['cameras'][cam_id]['settings'][k] = int(req_data['settings'][k])
                 else:
                     pst.settings['cameras'][cam_id]['settings'][k] = req_data['settings'][k]
         pst.save_settings()
