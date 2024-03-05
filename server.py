@@ -230,4 +230,4 @@ if __name__ == '__main__':
     print ("wait for camera to start...")
     time.sleep(3)
     print ("start server...")
-    app.run(debug=True)
+    app.run(debug=False)
