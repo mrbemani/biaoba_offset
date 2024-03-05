@@ -97,10 +97,14 @@ def set_camera():
     logger.debug(f'req_data: \n{req_data}')
     if 'settings' in req_data:
         if cam_id not in pst.settings['cameras']:
-            pst.settings['cameras'][cam_id] = dict(settings=dict())
-        for k in req_data['settings']:
+            pst.settings['cameras'][cam_id] = dict(id=cam_id, name=cam.cameras[cam_id]['name'], ip=cam.cameras[cam_id]['ip'], settings=dict(x=0,y=0,z=0,pitch=0,roll=0,yaw=0,gain=0,exposure=1000), markers=dict())
+        for k in req_data:
             if k == 'name':
-                pst.settings['cameras'][cam_id]['name'] = req_data['settings']['name']
+                pst.settings['cameras'][cam_id]['name'] = req_data['name']
+            elif k == 'ip':
+                pst.settings['cameras'][cam_id]['ip'] = req_data['ip']
+            elif k == 'id':
+                pst.settings['cameras'][cam_id]['id'] = req_data['id']
             else:
                 if k in ['pitch', 'yaw', 'roll', 'x', 'y', 'z', 'gain', 'exposure']:
                     pst.settings['cameras'][cam_id]['settings'][k] = float(req_data['settings'][k])
