@@ -219,12 +219,18 @@ if __name__ == '__main__':
     if not os.path.exists("offsets"):
         os.makedirs("offsets")
 
+    if not os.path.exists("tmp"):
+        os.makedirs("tmp")
+
     pst.load_settings()
     device_list, ret, deviceNum = cam.get_camera_list(return_json=True)
     print ("after get camera list")
     time.sleep(1)
     if deviceNum > 0:
         for device in device_list:
+            if os.path.exists(os.path.join("offsets", device['id'])) is False:
+                os.makedirs(os.path.join("offsets", device['id']))
+            
             print ("load device: ", device)
             if device['id'] in pst.settings['cameras']:
                 if device['ip'] == pst.settings['cameras'][device['id']]['ip']:

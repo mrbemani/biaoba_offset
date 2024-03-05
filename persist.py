@@ -52,7 +52,7 @@ def reset_offset_data(marker_uri):
     logger.debug(f'Resetting offset data for marker {marker_uri}')
     try:
         camera_id, marker_id = marker_uri.split('.')
-        offset_data_dir = os.path.join("offset_data", camera_id, marker_id)
+        offset_data_dir = os.path.join("offsets", camera_id, marker_id)
         if not os.path.exists(offset_data_dir):
             os.makedirs(offset_data_dir)
         with open(os.path.join(offset_data_dir, 'offset.json'), 'w', encoding='utf-8') as f:
@@ -71,7 +71,7 @@ def load_offset_data(marker_uri):
     logger.debug(f'Loading offset data for marker {marker_uri}')
     try:
         camera_id, marker_id = marker_uri.split('.')
-        offset_data_dir = os.path.join("offset_data", camera_id, marker_id)
+        offset_data_dir = os.path.join("offsets", camera_id, marker_id)
         if not os.path.exists(offset_data_dir):
             os.makedirs(offset_data_dir)
         if not os.path.exists(os.path.join(offset_data_dir, 'offset.json')):
@@ -111,7 +111,7 @@ def save_offset_data(marker_uri, offset_data):
         return False
 
     camera_id, marker_id = marker_uri.split('.')
-    offset_data_dir = os.path.join("offset_data", camera_id, marker_id)
+    offset_data_dir = os.path.join("offsets", camera_id, marker_id)
     if not os.path.exists(offset_data_dir):
         os.makedirs(offset_data_dir)
     with open(os.path.join(offset_data_dir, 'offset.json'), 'w', encoding='utf-8') as f:
@@ -126,7 +126,7 @@ def append_offset_data(marker_uri, offset_time, offset_x, offset_y, offset_z=0.0
     logger.debug(f'Appending offset data for marker {marker_uri}')
     try:
         camera_id, marker_id = marker_uri.split('.')
-        offset_data_dir = os.path.join("offset_data", camera_id, marker_id)
+        offset_data_dir = os.path.join("offsets", camera_id, marker_id)
         if not os.path.exists(offset_data_dir):
             os.makedirs(offset_data_dir)
         if not os.path.exists(os.path.join(offset_data_dir, 'offset.json')):
