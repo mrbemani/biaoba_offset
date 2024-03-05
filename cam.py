@@ -183,7 +183,6 @@ def get_camera_list(return_json=False, force_search=False):
         )
         cameras[serial_number] = cam_info.copy()
         cameras[serial_number]['deviceInfo'] = mvcc_dev_info
-        cameras[serial_number]['deviceHandle'] = MvCamera()
         cameras[serial_number]['savedFiles'] = []
         print ("current ip: %d.%d.%d.%d\n" % (nip1, nip2, nip3, nip4))
         camera_info_list.append(cam_info)
@@ -323,7 +322,7 @@ def ts_start_camera(cam_id: str, exposure_time: float = 2000.0, gain: float = 0.
     global g_bExit, cameras
     
     # ch:创建相机实例 | en:Creat Camera Object
-    cam = cameras[cam_id]['deviceHandle']
+    cam = MvCamera()
     
     # ch:选择设备并创建句柄 | en:Select device and create handle
     mv_device_info = cameras[cam_id]['deviceInfo']
@@ -338,6 +337,8 @@ def ts_start_camera(cam_id: str, exposure_time: float = 2000.0, gain: float = 0.
     if ret != 0:
         print ("open device fail! ret[0x%x]" % ret)
         sys.exit()
+
+    cameras[cam_id]['deviceHandle'] = cam
     
     # ch:探测网络最佳包大小(只对GigE相机有效) | en:Detection network optimal package size(It only works for the GigE camera)
     nPacketSize = cam.MV_CC_GetOptimalPacketSize()
