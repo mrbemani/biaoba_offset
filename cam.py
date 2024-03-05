@@ -119,8 +119,8 @@ def getCurrentFrame(camera_id: str):
     global cameras
     frame = None
     g_rclock.acquire()
-    if cameras[camera_id]['frame'] is not None:
-        frame = cameras[camera_id]['frame'].copy()
+    if len(cameras[camera_id]['savedFiles']) > 0:
+        frame = cv2.imread(cameras[camera_id]['savedFiles'][-1])
     g_rclock.release()
     return frame
 
@@ -305,7 +305,7 @@ def Save_Bmp(cam, buf_save_image, st_frame_info, bLock=True):
 
     if os.path.exists(os.path.join(TMP_DIR, cam['id'])) is False:
         os.makedirs(os.path.join(TMP_DIR, cam['id']))
-    
+
     file_path = os.path.join(TMP_DIR, cam['id'], str(st_frame_info.nFrameNum).zfill(10) + ".bmp")
     c_file_path = file_path.encode('ascii')
 

@@ -32,26 +32,35 @@ def get_image(camera_id, save_file, nPhoto=20):
     cam.clear_saved_files(camera_id=camera_id)
 
 
-def perform_comparison(camera_id, marker_id):
-    marker_rect = pst.settings['cameras'][camera_id]['markers'][marker_id]['roi']
+def perform_comparison(camera_id):
+    # capture and save target_image
+    target_image_file = os.path.join("offsets", str(camera_id), "target_image.bmp")
+    get_image(camera_id, target_image_file, nPhoto=20)
+    target_image = cv2.imread(target_image_file, cv2.IMREAD_GRAYSCALE)
+    if target_image is None:
+        return None, False, "目标图像加载失败"
+
     base_image_file = os.path.join("offsets", str(camera_id), "base_image.bmp")
     base_image = cv2.imread(base_image_file, cv2.IMREAD_GRAYSCALE)
     if base_image is None:
         return None, False, "基准图像加载失败"
-    # capture and save target_image
-    target_image_file = os.path.join("offsets", str(camera_id), "target_image.bmp")
-    get_image(target_image_file)
-    target_image = cv2.imread(target_image_file, cv2.IMREAD_GRAYSCALE)
-    if target_image is None:
-        return None, False, "目标图像加载失败"
-    # crop marker image for marker_id
-    image_h, image_w = base_image.shape[:2]
-    marker_rect = [marker_rect[0]*image_w, marker_rect[1]*image_h, marker_rect[2]*image_w, marker_rect[3]*image_h]
-    base_marker_image = base_image[marker_rect[1]:marker_rect[1]+marker_rect[3], marker_rect[0]:marker_rect[0]+marker_rect[2]]
-    target_marker_image = target_image[marker_rect[1]:marker_rect[1]+marker_rect[3], marker_rect[0]:marker_rect[0]+marker_rect[2]]
+    offsets = dict()
+    for marker_id in pst.settings['cameras'][camera_id]['markers']:
+        marker_roi = pst.settings['cameras'][camera_id]['markers'][marker_id]['roi']
+        h, w = target_image.shape[:2]
+        marker_crop = [int(marker_roi[0]*w), int(marker_roi[1]*h), int(marker_roi[2]*w), int(marker_roi[3]*h)]
+        t_roi = target_image[marker_crop[1]:marker_crop[1]+marker_crop[3], marker_crop[0]:marker_crop[0]+marker_crop[2]]
+        b_roi = base_image[marker_crop[1]:marker_crop[1]+marker_crop[3], marker_crop[0]:marker_crop[0]+marker_crop[2]]
+        MARKER_DIAMETER = pst.settings['cameras'][camera_id]['markers'][marker_id]['size'] * 1000.0
+        x, y, mmpp = compare_marker(b_roi, t_roi, MARKER_DIAMETER)
+        if x is not None and y is not None and mmpp is not None:
+            offsets[marker_id] = dict(x=x, y=y, mmpp=mmpp)
+    return offsets, True, "Success"
+
+
+def compare_marker(base_marker_image, target_marker_image, MARKER_DIAMETER):
     # find marker ellipse
     ellipse, bbox = tsu.find_marker(base_marker_image)
-    MARKER_DIAMETER = pst.settings['cameras'][camera_id]['markers'][marker_id]['size'] * 1000.0
     mmpp = MARKER_DIAMETER / max(ellipse[1][0], ellipse[1][1])
     x, y = tg.perform_compare(base_marker_image, target_marker_image)
     return x, y, mmpp
