@@ -17,7 +17,6 @@ import numpy as np
 import time
 
 
-
 from ctypes import *
 if os_type == 'linux':
     libc = cdll.LoadLibrary("libc.so.6")
@@ -88,6 +87,7 @@ def work_thread(cam):
                     cdll.msvcrt.memcpy(byref(buf_image), stOutFrame.pBufAddr, frame_len)
                 else:
                     libc.memcpy(byref(buf_image), stOutFrame.pBufAddr, frame_len)
+                cv2.imshow(cam['id']+"_frame", np.array(buf_image).reshape(stOutFrame.stFrameInfo.nHeight, stOutFrame.stFrameInfo.nWidth))
                 Save_Bmp(cam['id'], buf_image, stOutFrame.stFrameInfo, False)
                 if len(cam['savedFiles']) > 0:
                     print (cam['savedFiles'][-1])
@@ -296,7 +296,13 @@ def Save_Bmp(cam, buf_save_image, st_frame_info, bLock=True):
     if bLock is True:
         g_rclock.acquire()
 
-    file_path = os.path.join(TMP_DIR, cam['id'], str(st_frame_info.nFrameNum) + ".bmp")
+    if os.path.exists(TMP_DIR) is False:
+        os.makedirs(TMP_DIR)
+
+    if os.path.exists(os.path.join(TMP_DIR, cam['id'])) is False:
+        os.makedirs(os.path.join(TMP_DIR, cam['id']))
+
+    file_path = os.path.join(TMP_DIR, cam['id'], str(st_frame_info.nFrameNum).zfill(10) + ".bmp")
     c_file_path = file_path.encode('ascii')
 
     stSaveParam = MV_SAVE_IMAGE_TO_FILE_PARAM_EX()
@@ -312,6 +318,13 @@ def Save_Bmp(cam, buf_save_image, st_frame_info, bLock=True):
     ret = cam['deviceHandle'].MV_CC_SaveImageToFileEx(stSaveParam)
 
     cam['savedFiles'].append(file_path)
+    if len(cam['savedFiles']) > nSaveNum:
+        # remove the first file
+        os.remove(cam['savedFiles'].pop(0))
+        
+
+    # copy to frame
+    cam['frame'] = cv2.imread(file_path, 0)
 
     if bLock is True:
         g_rclock.release()

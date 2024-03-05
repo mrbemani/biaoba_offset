@@ -173,7 +173,7 @@ def capture_reference_image():
         return jsonify(status=0, data="invalid camera id")
     if 'sampleNumber' in req:
         sample_num = int(req['sampleNumber'])
-    af.get_image(os.path.join("offsets", str(camera_id), "base_image.bmp"), sample_num)
+    af.get_image(camera_id, os.path.join("offsets", str(camera_id), "base_image.bmp"), sample_num)
     return jsonify(status=1, data={})
     
 
@@ -213,7 +213,14 @@ def set_remote_server():
 def get_remote_server():
     return jsonify(status=1, data=pst.settings['remote_server'])
 
+
 if __name__ == '__main__':
+    if not os.path.exists("frames"):
+        os.makedirs("frames")
+
+    if not os.path.exists("offsets"):
+        os.makedirs("offsets")
+
     pst.load_settings()
     device_list, ret, deviceNum = cam.get_camera_list(return_json=True)
     print ("after get camera list")
@@ -229,7 +236,7 @@ if __name__ == '__main__':
                 device['settings'] = {"exposure": 1000.0, "gain": 0, 
                                       "pitch": 0, "roll": 0, "yaw": 0, 
                                       "x": 0, "y": 0, "z": 0}
-            threading.Thread(target=cam.ts_start_camera, args=(device['id'], device['settings']['exposure']), daemon=True).start()
+            threading.Thread(target=cam.ts_start_camera, args=(device['id'], device['settings']['exposure'], device['settings']['gain']), daemon=True).start()
             time.sleep(0.5)
     time.sleep(1)
     print ("wait for camera to start...")
