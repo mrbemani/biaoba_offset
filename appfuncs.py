@@ -16,8 +16,10 @@ except:
 
 
 def get_image(camera_id, save_file, nPhoto=20):
+    camdev = cam.cameras[camera_id]['deviceHandle']
     cam.nSaveNum = nPhoto
     cam.bSaveBmp = True
+    cam.start_camera(camera_id, autoGrab=True)
     base_image_array = []
     while cam.bSaveBmp:
         time.sleep(1)
