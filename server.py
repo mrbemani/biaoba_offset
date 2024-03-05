@@ -212,7 +212,7 @@ if __name__ == '__main__':
     pst.load_settings()
     device_list, ret, deviceNum = cam.get_camera_list(return_json=True)
     print ("after get camera list")
-    time.sleep(5)
+    time.sleep(1)
     if deviceNum > 0:
         for device in device_list:
             print ("load device: ", device)
@@ -225,4 +225,6 @@ if __name__ == '__main__':
                                       "pitch": 0, "roll": 0, "yaw": 0, 
                                       "x": 0, "y": 0, "z": 0}
             threading.Thread(target=cam.ts_start_camera, args=(device['id'], device['settings']['exposure']), daemon=True).start()
+            time.sleep(0.5)
+    time.sleep(3)
     app.run(debug=True)
