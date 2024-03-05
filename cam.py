@@ -47,7 +47,7 @@ MONO8 = 17301505
 MONO12 = 17825797
 
 bSaveBmp = True
-nSaveNum = 0
+nSaveNum = 50
 
 
 def stop_all_cameras():
@@ -89,7 +89,7 @@ def work_thread(cam):
                     cdll.msvcrt.memcpy(byref(buf_image), stOutFrame.pBufAddr, frame_len)
                 else:
                     libc.memcpy(byref(buf_image), stOutFrame.pBufAddr, frame_len)
-                cam['frame'] = np.array(buf_image).reshape(stOutFrame.stFrameInfo.nHeight, stOutFrame.stFrameInfo.nWidth)
+                #cam['frame'] = np.array(buf_image).reshape(stOutFrame.stFrameInfo.nHeight, stOutFrame.stFrameInfo.nWidth)
                 Save_Bmp(cam, buf_image, stOutFrame.stFrameInfo, False)
                 if len(cam['savedFiles']) > 0:
                     print (cam['savedFiles'][-1])
@@ -292,6 +292,7 @@ def close_camera(cam: any):
 def Save_Bmp(cam, buf_save_image, st_frame_info, bLock=True):
 
     if 0 == buf_save_image:
+        print ("buf_save_image is null")
         return
 
     # 获取缓存锁
