@@ -59,6 +59,7 @@ def stop_all_cameras():
             ret = cam['deviceHandle'].MV_CC_CloseDevice()
             ret = cam['deviceHandle'].MV_CC_DestroyHandle()
             del cam['deviceHandle']
+    cv2.destroyAllWindows()
 
 
 # 为线程定义一个函数
@@ -88,6 +89,7 @@ def work_thread(cam):
                 else:
                     libc.memcpy(byref(buf_image), stOutFrame.pBufAddr, frame_len)
                 cv2.imshow(cam['id']+"_frame", np.array(buf_image).reshape(stOutFrame.stFrameInfo.nHeight, stOutFrame.stFrameInfo.nWidth))
+                cv2.waitKey(1)
                 Save_Bmp(cam['id'], buf_image, stOutFrame.stFrameInfo, False)
                 if len(cam['savedFiles']) > 0:
                     print (cam['savedFiles'][-1])
