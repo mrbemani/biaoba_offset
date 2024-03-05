@@ -99,7 +99,8 @@ def work_thread(cam):
                 else:
                     libc.free(buf_image)
         else:
-            print ("no data[0x%x]" % ret)
+            pass
+            #print ("no data[0x%x]" % ret)
         if g_bExit == True:
             break
 

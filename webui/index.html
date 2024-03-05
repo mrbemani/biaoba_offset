@@ -702,13 +702,14 @@
               settings.name = data.field.name
               const camera_set_post_data = {
                 id: _this.currentCamera.id, // 相机ID
+                name: data.field.name,
+                ip: data.field.ip,
                 settings: {
                   exposure: data.field.exposure,
                   gain: data.field.gain,
                   pitch: data.field.pitch,
                   roll: data.field.roll,
                   yaw: data.field.yaw,
-                  name: data.field.name,
                   standard: data.field.standard // 是否是基准相机，0: 否， 1: 是
                 }
               }
