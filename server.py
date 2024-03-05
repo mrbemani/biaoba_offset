@@ -73,7 +73,7 @@ def get_camera_frame(camera_id):
 @app.route('/get-camera-frame/<string:camera_id>.bmp')
 def get_camera_frame_jpg(camera_id):
     logger.debug(f'Getting frame for camera {camera_id}')
-    return send_from_directory('frames', f'{camera_id}.bmp')
+    return send_from_directory('offsets', camera_id, 'frame.bmp')
 
 
 @app.route('/api/v1/camera/<string:camera_id>/get-info', methods=['GET'])
@@ -215,8 +215,6 @@ def get_remote_server():
 
 
 if __name__ == '__main__':
-    if not os.path.exists("frames"):
-        os.makedirs("frames")
 
     if not os.path.exists("offsets"):
         os.makedirs("offsets")
