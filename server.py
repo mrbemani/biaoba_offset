@@ -115,6 +115,7 @@ def set_camera():
                 elif k == 'standard':
                     pst.settings['cameras'][cam_id]['settings'][k] = int(req_data['settings'][k])
                 else:
+                    print ("k=", k)
                     pst.settings['cameras'][cam_id]['settings'][k] = req_data['settings'][k]
         pst.save_settings()
         print (pst.settings)
