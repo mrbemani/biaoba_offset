@@ -226,5 +226,8 @@ if __name__ == '__main__':
                                       "x": 0, "y": 0, "z": 0}
             threading.Thread(target=cam.ts_start_camera, args=(device['id'], device['settings']['exposure']), daemon=True).start()
             time.sleep(0.5)
+    time.sleep(1)
+    print ("wait for camera to start...")
     time.sleep(3)
+    print ("start server...")
     app.run(debug=True)
