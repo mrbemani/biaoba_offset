@@ -46,7 +46,7 @@ cameras = dict()
 MONO8 = 17301505
 MONO12 = 17825797
 
-bSaveBmp = False
+bSaveBmp = True
 nSaveNum = 0
 
 
@@ -76,9 +76,9 @@ def work_thread(cam):
             buf_image = None
             if bSaveBmp is True:
                 print ("Saving ... ")
-                if len(cam['savedFiles']) >= nSaveNum:
-                    bSaveBmp = False
-                    print ("save image number enough!")
+                #if len(cam['savedFiles']) >= nSaveNum:
+                    #bSaveBmp = False
+                #    print ("save image number enough!")
                 if stOutFrame.stFrameInfo.enPixelType == PixelType_Gvsp_Mono8:
                     buf_image = (c_ubyte * frame_len)()
                 elif stOutFrame.stFrameInfo.enPixelType == PixelType_Gvsp_Mono12:
