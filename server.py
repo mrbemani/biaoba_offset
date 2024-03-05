@@ -162,6 +162,7 @@ def set_markers(camera_id):
 
 @app.route('/api/v1/camera/capture-reference-image', methods=['POST'])
 def capture_reference_image():
+    # {'id': 'K71601263', 'algorithm': 'elliptic', 'capture': '自动', 'frequency': '10000', 'sampleNumber': '20', 'save_path': './offsets/K71601263/marker_imgs/'}
     req = request.get_json()
     print (req)
     sample_num = 20

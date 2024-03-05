@@ -22,7 +22,7 @@ def get_image(camera_id, save_file, nPhoto=20):
     #cam.start_camera(camera_id, autoGrab=True)
     cam.clear_saved_files(camera_id=camera_id)
     base_image_array = []
-    while cam.cameras[camera_id]['savedFiles'] < nPhoto:
+    while len(cam.cameras[camera_id]['savedFiles']) < nPhoto:
         time.sleep(1)
     for f in cam.cameras[camera_id]['savedFiles']:
         im = cv2.imread(f, 0)
