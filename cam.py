@@ -332,13 +332,8 @@ def ts_start_camera(cam_id: str, exposure_time: float = 2000.0, gain: float = 0.
         print ("create handle fail! ret[0x%x]" % ret)
         sys.exit()
 
-    ret = MvCamera.MV_CC_IsDeviceAccessible(mv_device_info, MV_ACCESS_Exclusive)
-    if ret != 1:
-        print ("MV_CC_IsDeviceAccessible: ret[0x%x]" % ret)
-        sys.exit()
-
     # ch:打开设备 | en:Open device
-    ret = cam.MV_CC_OpenDevice(MV_ACCESS_Exclusive, 0)
+    ret = cam.MV_CC_OpenDevice(MV_ACCESS_ExclusiveWithSwitch, 0)
     if ret != 0:
         print ("open device fail! ret[0x%x]" % ret)
         sys.exit()
