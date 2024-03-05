@@ -326,7 +326,7 @@ def Save_Bmp(cam, buf_save_image, st_frame_info, bLock=True):
         
 
     # copy to frame
-    cam['frame'] = cv2.imread(file_path, 0)
+    #cam['frame'] = cv2.imread(file_path, 0)
 
     if bLock is True:
         g_rclock.release()
