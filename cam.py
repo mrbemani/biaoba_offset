@@ -90,7 +90,7 @@ def work_thread(cam):
                     libc.memcpy(byref(buf_image), stOutFrame.pBufAddr, frame_len)
                 cv2.imshow(cam['id']+"_frame", np.array(buf_image).reshape(stOutFrame.stFrameInfo.nHeight, stOutFrame.stFrameInfo.nWidth))
                 cv2.waitKey(1)
-                Save_Bmp(cam['id'], buf_image, stOutFrame.stFrameInfo, False)
+                Save_Bmp(cam, buf_image, stOutFrame.stFrameInfo, False)
                 if len(cam['savedFiles']) > 0:
                     print (cam['savedFiles'][-1])
                 g_rclock.release()
