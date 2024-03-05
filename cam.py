@@ -82,14 +82,14 @@ def work_thread(cam):
                 if stOutFrame.stFrameInfo.enPixelType == PixelType_Gvsp_Mono8:
                     buf_image = (c_ubyte * frame_len)()
                 elif stOutFrame.stFrameInfo.enPixelType == PixelType_Gvsp_Mono12:
+                    print ("12")
                     buf_image = (c_uint16 * frame_len)()
                 g_rclock.acquire()
                 if os_type == 'win32':
                     cdll.msvcrt.memcpy(byref(buf_image), stOutFrame.pBufAddr, frame_len)
                 else:
                     libc.memcpy(byref(buf_image), stOutFrame.pBufAddr, frame_len)
-                cv2.imshow(cam['id']+"_frame", np.array(buf_image).reshape(stOutFrame.stFrameInfo.nHeight, stOutFrame.stFrameInfo.nWidth))
-                cv2.waitKey(1)
+                cam['frame'] = np.array(buf_image).reshape(stOutFrame.stFrameInfo.nHeight, stOutFrame.stFrameInfo.nWidth)
                 Save_Bmp(cam, buf_image, stOutFrame.stFrameInfo, False)
                 if len(cam['savedFiles']) > 0:
                     print (cam['savedFiles'][-1])
