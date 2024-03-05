@@ -11,8 +11,8 @@ import target as tg
 try:
     import cam
 except:
-    print ("using fake camera!!!")
-    import cam_mockup as cam
+    print ("Failed to import camera!!!")
+    exit(1)
 
 
 def get_image(camera_id, save_file, nPhoto=20):
@@ -20,10 +20,11 @@ def get_image(camera_id, save_file, nPhoto=20):
     cam.nSaveNum = nPhoto
     cam.bSaveBmp = True
     #cam.start_camera(camera_id, autoGrab=True)
+    cam.clear_saved_files(camera_id=camera_id)
     base_image_array = []
-    while cam.bSaveBmp:
+    while cam.cameras[camera_id]['savedFiles'] < nPhoto:
         time.sleep(1)
-    for f in cam.savedFiles:
+    for f in cam.cameras[camera_id]['savedFiles']:
         im = cv2.imread(f, 0)
         base_image_array.append(im)
     fused_base_image = avgpixel.average_image_gray(base_image_array)
