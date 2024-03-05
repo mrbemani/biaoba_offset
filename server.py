@@ -105,18 +105,18 @@ def set_camera():
                 pst.settings['cameras'][cam_id]['ip'] = req_data['ip']
             elif k == 'id':
                 pst.settings['cameras'][cam_id]['id'] = req_data['id']
-            else:
-                if k in ['pitch', 'yaw', 'roll', 'x', 'y', 'z', 'gain', 'exposure']:
-                    pst.settings['cameras'][cam_id]['settings'][k] = float(req_data['settings'][k])
-                    if k == 'exposure':
-                        cam.set_camera_exposure(cam_id, float(req_data['settings'][k]))
-                    elif k == 'gain':
-                        cam.set_camera_gain(cam_id, float(req_data['settings'][k]))
-                elif k == 'standard':
-                    pst.settings['cameras'][cam_id]['settings'][k] = int(req_data['settings'][k])
-                else:
-                    print ("k=", k)
-                    pst.settings['cameras'][cam_id]['settings'][k] = req_data['settings'][k]
+            elif k == 'settings':
+                for kk in req_data['settings']:
+                    if kk in ['pitch', 'yaw', 'roll', 'x', 'y', 'z', 'gain', 'exposure']:
+                        pst.settings['cameras'][cam_id]['settings'][kk] = float(req_data['settings'][kk])
+                        if kk == 'exposure':
+                            cam.set_camera_exposure(cam_id, float(req_data['settings'][kk]))
+                        elif kk == 'gain':
+                            cam.set_camera_gain(cam_id, float(req_data['settings'][kk]))
+                    elif kk == 'standard':
+                        pst.settings['cameras'][cam_id]['settings'][kk] = int(req_data['settings'][kk])
+                    else:
+                        pst.settings['cameras'][cam_id]['settings'][kk] = req_data['settings'][kk]
         pst.save_settings()
         print (pst.settings)
     return jsonify(status=1, data={})
