@@ -47,7 +47,7 @@ MONO8 = 17301505
 MONO12 = 17825797
 
 bSaveBmp = True
-nSaveNum = 50
+nSaveNum = 20
 
 
 def stop_all_cameras():
@@ -75,7 +75,7 @@ def work_thread(cam):
             frame_len = stOutFrame.stFrameInfo.nFrameLen
             buf_image = None
             if bSaveBmp is True:
-                print ("Saving ... ")
+                #print ("Saving ... ")
                 #if len(cam['savedFiles']) >= nSaveNum:
                     #bSaveBmp = False
                 #    print ("save image number enough!")
@@ -91,8 +91,8 @@ def work_thread(cam):
                     libc.memcpy(byref(buf_image), stOutFrame.pBufAddr, frame_len)
                 #cam['frame'] = np.array(buf_image).reshape(stOutFrame.stFrameInfo.nHeight, stOutFrame.stFrameInfo.nWidth)
                 Save_Bmp(cam, buf_image, stOutFrame.stFrameInfo, False)
-                if len(cam['savedFiles']) > 0:
-                    print (cam['savedFiles'][-1])
+                #if len(cam['savedFiles']) > 0:
+                #    print (cam['savedFiles'][-1])
                 g_rclock.release()
             nRet = cam['deviceHandle'].MV_CC_FreeImageBuffer(stOutFrame)
             if buf_image is not None:
