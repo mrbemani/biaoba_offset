@@ -469,21 +469,6 @@
     <div id="layerInit" style="display: none">
       <form class="layui-form form-init" action="" lay-filter="formInitConfig">
         <div class="layui-form-item">
-          <label class="layui-form-label">相机 ID</label>
-          <div class="layui-input-block">
-            <input
-              type="text"
-              name="id"
-              required
-              lay-verify="required"
-              placeholder="请输入相机 ID"
-              autocomplete="off"
-              class="layui-input"
-            />
-          </div>
-        </div>
-
-        <div class="layui-form-item">
           <label class="layui-form-label">检测算法</label>
           <div class="layui-input-block">
             <select name="algorithm" lay-verify="required">
@@ -527,28 +512,13 @@
             />
           </div>
         </div>
-
-        <!-- <div class="layui-form-item">
-          <label class="layui-form-label">抓拍样本数</label>
-          <div class="layui-input-block">
-            <input
-              type="number"
-              name="sample"
-              required
-              lay-verify="required"
-              placeholder="请输入抓拍样本数"
-              autocomplete="off"
-              class="layui-input"
-            />
-          </div>
-        </div> -->
-        <div class="layui-form-item">
+        <div class="layui-form-item layui-form-block">
           <label class="layui-form-label">保存路径</label>
           <div class="layui-input-block">
             <input type="text" name="save_path" placeholder="请输入保存路径" autocomplete="off" class="layui-input" />
           </div>
         </div>
-        <div class="layui-form-item layui-form-btns">
+        <div class="layui-form-item layui-form-block">
           <div class="layui-input-block">
             <button class="layui-btn layui-btn-normal" lay-submit lay-filter="formSubmitInit">确定</button>
           </div>

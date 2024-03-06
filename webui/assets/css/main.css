@@ -228,6 +228,9 @@ body {
 .form-init .layui-form-item {
   flex-basis: 50%;
 }
+.form-init .layui-form-block {
+  flex-basis: 100%;
+}
 
 /* 实时数据 */
 .realtime__data__list {
