@@ -3,6 +3,7 @@
 import sys
 import os
 import time
+from datetime import datetime, timedetla
 import argparse
 import threading
 from flask import Flask, jsonify, request, render_template, redirect, url_for, send_from_directory
@@ -162,13 +163,22 @@ def set_markers(camera_id):
 
 @app.route('/api/v1/camera/capture-reference-image', methods=['POST'])
 def capture_reference_image():
-    # {'id': 'K71601263', 'algorithm': 'elliptic', 'capture': '自动', 'frequency': '10000', 'sampleNumber': '20', 'save_path': './offsets/K71601263/marker_imgs/'}
+    # {'algorithm': 'elliptic', 'capture': '自动', 'frequency': '1000', 'sampleNumber': '20', 'save_path': 'd:/temp'}
     req = request.get_json()
     print (req)
     sample_num = 20
-    if 'id' not in req:
-        return jsonify(status=0, data="invalid request")
-    save_path = os.path.join(SYS_TEMP_DIR, "capture", "reference", str(req['id']).strip().replace("-", "_").replace("/", "_"))
+    pst.settings['capture'] = dict(
+        algorithm=req['algorithm'], 
+        automate=bool(req['capture'] == "自动"), 
+        frequency=float(req['frequency']), 
+        sampleNumber=int(req['sampleNumber']),
+        running = False,
+        start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    )
+    pst.save_settings()
+
+    for camera_id in pst.settings['cameras']:
+        camera_id
     camera_id = req['id']
     if camera_id not in pst.settings['cameras']:
         return jsonify(status=0, data="invalid camera id")
@@ -207,11 +217,13 @@ def get_timed_check_result(camera_id):
 
 @app.route('/api/v1/remote-server/set', methods=['POST'])
 def set_remote_server():
+    print (request.get_json())
     pst.settings['remote_server'] = request.get_json()
     return jsonify(status=1, data={})
 
 @app.route('/api/v1/remote-server/get', methods=['GET'])
 def get_remote_server():
+
     return jsonify(status=1, data=pst.settings['remote_server'])
 
 
@@ -224,6 +236,20 @@ if __name__ == '__main__':
         os.makedirs("tmp")
 
     pst.load_settings()
+    if "capture" not in pst.settings:
+        pst.settings['capture'] = dict(
+            algorithm="optical-flow", 
+            automate=True, 
+            frequency=24, 
+            sampleNumber=20,
+            running = False,
+            start_time = None
+        )
+    if "cameras" not in pst.settings:
+        pst.settings['cameras'] = dict()
+    if "remote_server" not in pst.settings:
+        pst.settings['remote_server'] = dict(ip="
+    pst.save_settings()
     device_list, ret, deviceNum = cam.get_camera_list(return_json=True)
     print ("after get camera list")
     time.sleep(1)
