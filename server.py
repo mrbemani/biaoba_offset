@@ -3,7 +3,7 @@
 import sys
 import os
 import time
-from datetime import datetime, timedetla
+from datetime import datetime, timedelta
 import argparse
 import threading
 from flask import Flask, jsonify, request, render_template, redirect, url_for, send_from_directory
