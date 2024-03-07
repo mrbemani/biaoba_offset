@@ -932,16 +932,13 @@
           _this.getIntervalCheckResult()
 
           api
-            .post('/api/v1/camera/set-timed-check', {
-              camera: id, // 相机ID
-              algorithm: 'optical-flow', // 对比算法: elliptic, optical-flow
-              sample: 10, // 连续抓拍样本数
-              interval: 3600 // 对比间隔 (s)
-            })
+            .post('/api/v1/camera/set-timed-check', {})
             .then(res => {
               if (res.status === 1) {
-                layer.msg('已设置定时对比！')
+                layer.msg('成功启动定时对比！')
                 _this.getIntervalCheckResult('interval')
+              } else {
+                layer.msg(res.data.message)
               }
             })
             .catch(err => {
@@ -953,18 +950,13 @@
         // 检测执行【暂停】：取消定时对比
         cancelIntervalCheck() {
           const _this = this
-          const id = _this.currentCamera.id
-          if (!id) {
-            layer.msg('请选择相机！')
-            return
-          }
           api
-            .post('/api/v1/camera/cancel-timed-check', {
-              camera: id // 相机ID
-            })
+            .post('/api/v1/camera/cancel-timed-check', {})
             .then(res => {
               if (res.status === 1) {
                 layer.msg('已取消定时对比！')
+              } else {
+                layer.msg(res.data.message)
               }
             })
             .catch(err => {

@@ -4,6 +4,7 @@ import os
 import time
 import cv2
 import avgpixel
+import threading
 import tsutil as tsu
 import persist as pst
 import target as tg
@@ -13,6 +14,9 @@ try:
 except:
     print ("Failed to import camera!!!")
     exit(1)
+
+
+worker = None
 
 
 def get_image(camera_id, save_file, nPhoto=20):
@@ -65,4 +69,47 @@ def compare_marker(base_marker_image, target_marker_image, MARKER_DIAMETER):
     x, y = tg.perform_compare(base_marker_image, target_marker_image)
     return x, y, mmpp
 
+
+def capture_check_thread():
+    while True:
+        if type(pst.settings) is not dict:
+            time.sleep(5)
+            continue
+        if 'cameras' not in pst.settings or len(pst.settings['cameras']) == 0:
+            time.sleep(5)
+            continue
+        if 'capture' not in pst.settings or not pst.settings['capture']:
+            time.sleep(5)
+            continue
+        if pst.settings['capture']['running'] == False:
+            time.sleep(5)
+            continue
+        if pst.settings['capture']['start_time'] is None:
+            time.sleep(5)
+            continue
+        if pst.settings['capture']['start_time'] > time.time():
+            time.sleep(5)
+            continue
+
+        try:
+            for camera_id in pst.settings['cameras']:
+                offsets, success, message = perform_comparison(camera_id)
+                if success:
+                    for marker_id in offsets:
+                        pst.save_offset(camera_id, marker_id, offsets[marker_id])
+                else:
+                    print (f"Failed to compare marker for camera {camera_id}: {message}")
+        except:
+            print ("Failed to perform comparison")
+            print (traceback.format_exc())
+        time.sleep(60*60*24)
+
+
+while True:
+    try:
+        if worker is not None:
+                        
+    except:
+        pass
+    time.sleep(1)
 

@@ -3,6 +3,7 @@
 import sys
 import os
 import time
+import shutil
 from datetime import datetime, timedelta
 import argparse
 import threading
@@ -166,7 +167,6 @@ def capture_reference_image():
     # {'algorithm': 'elliptic', 'capture': '自动', 'frequency': '1000', 'sampleNumber': '20', 'save_path': 'd:/temp'}
     req = request.get_json()
     print (req)
-    sample_num = 20
     pst.settings['capture'] = dict(
         algorithm=req['algorithm'], 
         automate=bool(req['capture'] == "自动"), 
@@ -176,15 +176,15 @@ def capture_reference_image():
         start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     )
     pst.save_settings()
-
     for camera_id in pst.settings['cameras']:
-        camera_id
-    camera_id = req['id']
-    if camera_id not in pst.settings['cameras']:
-        return jsonify(status=0, data="invalid camera id")
-    if 'sampleNumber' in req:
-        sample_num = int(req['sampleNumber'])
-    af.get_image(camera_id, os.path.join("offsets", str(camera_id), "base_image.bmp"), sample_num)
+        base_image_path = os.path.join("offsets", str(camera_id), "base_image.bmp")
+        os.unlink(base_image_path)
+        #os.unlink(os.path.join("offsets", str(camera_id), "target.bmp"))
+        shutil.rmtree(os.path.join("offsets", str(camera_id), "check_data"))
+        os.makedirs(os.path.join("offsets", str(camera_id), "check_data"))
+        sample_num = pst.settings['capture']['sampleNumber']
+        threading.Thread(target=af.get_image, args=(camera_id, base_image_path, sample_num)).start()
+        time.sleep(1)
     return jsonify(status=1, data={})
     
 
@@ -198,37 +198,86 @@ def check_offset():
 @app.route('/api/v1/camera/set-timed-check', methods=['POST'])
 def set_timed_check():
     # Implement logic to set timed check
-    pass
+    if pst.settings['capture']['running'] == True:
+        return jsonify(status=0, data=dict(message="检测已经在运行中"))
+    else:
+        pst.settings['capture']['running'] = True
+        pst.save_settings()
+        return jsonify(status=1, data={})
 
 @app.route('/api/v1/camera/cancel-timed-check', methods=['POST'])
 def cancel_timed_check():
     # Implement logic to cancel timed check
-    pass
-
-@app.route('/api/v1/camera/<string:camera_id>/get-timed-check', methods=['GET'])
-def get_timed_check(camera_id):
-    # Implement logic to get timed check status
-    pass
+    if pst.settings['capture']['running'] == False:
+        return jsonify(status=0, data=dict(message="检测没有在运行中"))
+    else:
+        pst.settings['capture']['running'] = False
+        pst.save_settings()
+        return jsonify(status=1, data={})
 
 @app.route('/api/v1/camera/<string:camera_id>/get-timed-check-result', methods=['GET'])
 def get_timed_check_result(camera_id):
-    pst.load_offset_data(camera_id)
+    if camera_id not in pst.settings['cameras']:
+        return jsonify(status=0, data=dict(message=f"相机{camera_id}不存在"))
+    """
+    if pst.settings['capture']['running'] == False:
+        return jsonify(status=0, data=dict(message="检测没有在运行中"))
+    if pst.settings['capture']['start_time'] is None:
+        return jsonify(status=0, data=dict(message="检测没有在运行中"))
+    if pst.settings['capture']['start_time'] > time.time():
+        return jsonify(status=0, data=dict(message="检测没有在运行中"))
+    offsets = dict()
+    """
+    ret = {
+        "status": 1,
+        "data": {
+            "camera": camera_id,
+            "algorithm": "optical-flow",
+            "sample": 10,
+            "interval": 24,
+            "start_time": "2019-01-01 12:00:00",
+            "results": [
+                {
+                    "datetime": "2019-01-01 12:00:00",
+                    "marker_offset": [
+                        {
+                            "marker": "a",
+                            "offset": [1.0, 0.0]
+                        },
+                        {
+                            "marker": "b",
+                            "offset": [0.0, 1.0]
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+    return jsonify(ret)
     
 
 @app.route('/api/v1/remote-server/set', methods=['POST'])
 def set_remote_server():
     print (request.get_json())
-    pst.settings['remote_server'] = request.get_json()
+    jdata = request.get_json()
+    pst.settings['remote_server'] = dict(
+        server1=jdata['server1'],
+        server2=jdata['server2']
+    )
+    pst.save_settings()
     return jsonify(status=1, data={})
 
 @app.route('/api/v1/remote-server/get', methods=['GET'])
 def get_remote_server():
-
-    return jsonify(status=1, data=pst.settings['remote_server'])
+    servers = dict(
+        server1=pst.settings['remote_server']['server1'],
+        server2=pst.settings['remote_server']['server2']
+    )
+    return jsonify(status=1, data=servers)
 
 
 if __name__ == '__main__':
-
+    import uuid
     if not os.path.exists("offsets"):
         os.makedirs("offsets")
 
@@ -248,7 +297,14 @@ if __name__ == '__main__':
     if "cameras" not in pst.settings:
         pst.settings['cameras'] = dict()
     if "remote_server" not in pst.settings:
-        pst.settings['remote_server'] = dict()
+        pst.settings['remote_server'] = dict(
+            server1="", server2=""
+        )
+    if "machine" not in pst.settings:
+        pst.settings['machine'] = dict(
+            id=hex(uuid.getnode())[2:],
+            name="biaoba_offset_box"
+        )
     pst.save_settings()
     device_list, ret, deviceNum = cam.get_camera_list(return_json=True)
     print ("after get camera list")

@@ -64,25 +64,23 @@ def reset_offset_data(marker_uri):
         return False
 
 
-def load_offset_data(marker_uri):
+def load_offset_data(camera_id):
     """
     Load offset data from offset.json
     """
-    logger.debug(f'Loading offset data for marker {marker_uri}')
+    logger.debug(f'Loading offset data for marker {camera_id}')
     try:
-        camera_id, marker_id = marker_uri.split('.')
-        offset_data_dir = os.path.join("offsets", camera_id, marker_id)
+        offset_data_dir = os.path.join("offsets", camera_id, "markers")
         if not os.path.exists(offset_data_dir):
             os.makedirs(offset_data_dir)
-        if not os.path.exists(os.path.join(offset_data_dir, 'offset.json')):
-            with open(os.path.join(offset_data_dir, 'offset.json'), 'w', encoding='utf-8') as f:
-                json.dump(dict(offsets=[]), f, ensure_ascii=False, indent=4)
-        _offset_file = json.load(open(os.path.join(offset_data_dir, 'offset.json'), 'r', encoding='utf-8'))
+        if not os.path.exists(os.path.join(offset_data_dir, 'history.yaml')):
+            return dict()
+        _offset_file = json.load(open(os.path.join(offset_data_dir, 'history.yaml'), 'r', encoding='utf-8'))
         for offset in _offset_file['offsets']:
             offset['time'] = datetime.fromtimestamp(offset['time'])
         return _offset_file['offsets']
     except:
-        logger.error(f'Failed to load offset data for marker {marker_uri}')
+        logger.error(f'Failed to load offset data for marker {camera_id}')
         logger.error(traceback.format_exc())
         return []
 
@@ -94,11 +92,11 @@ def save_offset_data(marker_uri, offset_data):
     _save_data = []
     for offset in offset_data:
         if isinstance(offset['time'], datetime) and offset['time'].timestamp() > 0:
-            _save_data.append(dict(time=offset['time'].timestamp(), x=offset['x'], y=offset['y'], z=offset['z']))
+            _save_data.append(dict(time=offset['time'].timestamp(), x=offset['x'], y=offset['y']))
         elif isinstance(offset['time'], float) and offset['time'] > 0:
-            _save_data.append(dict(time=offset['time'], x=offset['x'], y=offset['y'], z=offset['z']))
+            _save_data.append(dict(time=offset['time'], x=offset['x'], y=offset['y']))
         elif isinstance(offset['time'], int) and offset['time'] > 0:
-            _save_data.append(dict(time=offset['time'], x=offset['x'], y=offset['y'], z=offset['z']))
+            _save_data.append(dict(time=offset['time'], x=offset['x'], y=offset['y']))
         else:
             logger.error(f'Unknown time format: {type(offset["time"])}')
 

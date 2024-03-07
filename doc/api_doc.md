@@ -530,7 +530,7 @@ GET /api/v1/camera/{ID}/get-timed-check-result
         "camera": 1,                            // 相机ID
         "algorithm": "optical-flow",            // 对比算法: elliptic, optical-flow
         "sample": 10,                           // 连续抓拍样本数
-        "interval": 3600,                       // 对比间隔 (s)
+        "interval": 24,                         // 对比间隔 (小时)
         "start_time": "2019-01-01 12:00:00",    // 开始时间, ISO-8601 格式
         "results": [
             {
