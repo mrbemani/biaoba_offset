@@ -248,7 +248,7 @@ if __name__ == '__main__':
     if "cameras" not in pst.settings:
         pst.settings['cameras'] = dict()
     if "remote_server" not in pst.settings:
-        pst.settings['remote_server'] = dict(ip="
+        pst.settings['remote_server'] = dict()
     pst.save_settings()
     device_list, ret, deviceNum = cam.get_camera_list(return_json=True)
     print ("after get camera list")
