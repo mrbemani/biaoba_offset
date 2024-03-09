@@ -111,9 +111,11 @@ def work_thread(cam):
 def clear_saved_files(camera_id: str):
     global cameras
     if len(cameras[camera_id]['savedFiles']) > 0:
+        g_rclock.acquire()
         while len(cameras[camera_id]['savedFiles']) > 2:
             f = cameras[camera_id]['savedFiles'].pop(0)
             os.remove(f)
+        g_rclock.release()
         #cameras[camera_id]['savedFiles'].clear()
 
 def getCurrentFrame(camera_id: str):
