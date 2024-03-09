@@ -75,7 +75,8 @@ def get_camera_frame(camera_id):
 @app.route('/get-camera-frame/<string:camera_id>.bmp')
 def get_camera_frame_jpg(camera_id):
     logger.debug(f'Getting frame for camera {camera_id}')
-    return send_from_directory(f'offsets/{camera_id}', 'frame.bmp')
+    frame_bmp = [x for x in os.listdir(f'tmp/{camera_id}/') if x.endswith('.bmp')].sort()[-1]
+    return send_from_directory(f'tmp/{camera_id}', frame_bmp)
 
 
 @app.route('/api/v1/camera/<string:camera_id>/get-info', methods=['GET'])
