@@ -75,8 +75,10 @@ def get_camera_frame(camera_id):
 @app.route('/get-camera-frame/<string:camera_id>.bmp')
 def get_camera_frame_jpg(camera_id):
     logger.debug(f'Getting frame for camera {camera_id}')
-    frame_bmp = [x for x in os.listdir(f'tmp/{camera_id}/') if x.endswith('.bmp')].sort()[-1]
-    return send_from_directory(f'tmp/{camera_id}', frame_bmp)
+    frames = [x for x in os.listdir(f'tmp/{camera_id}/') if x.endswith('.bmp')].sort()
+    if frames is None or len(frames) == 0:
+        return send_from_directory('webui/assets', 'noimage.png')
+    return send_from_directory(f'tmp/{camera_id}', frames[-1])
 
 
 @app.route('/api/v1/camera/<string:camera_id>/get-info', methods=['GET'])
