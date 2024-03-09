@@ -178,9 +178,10 @@ def capture_reference_image():
     pst.save_settings()
     for camera_id in pst.settings['cameras']:
         base_image_path = os.path.join("offsets", str(camera_id), "base_image.bmp")
-        os.unlink(base_image_path)
-        #os.unlink(os.path.join("offsets", str(camera_id), "target.bmp"))
-        shutil.rmtree(os.path.join("offsets", str(camera_id), "check_data"))
+        if os.path.exists(base_image_path):
+            os.unlink(base_image_path)
+        if os.path.exists(os.path.join("offsets", str(camera_id), "check_data")):
+            shutil.rmtree(os.path.join("offsets", str(camera_id), "check_data"))
         os.makedirs(os.path.join("offsets", str(camera_id), "check_data"))
         sample_num = pst.settings['capture']['sampleNumber']
         threading.Thread(target=af.get_image, args=(camera_id, base_image_path, sample_num)).start()
