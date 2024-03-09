@@ -193,13 +193,6 @@ def capture_reference_image():
     return jsonify(status=1, data={})
     
 
-@app.route('/api/v1/camera/check-offset', methods=['POST'])
-def check_offset():
-    # Implement logic to check offset
-
-    
-    pass
-
 @app.route('/api/v1/camera/set-timed-check', methods=['POST'])
 def set_timed_check():
     # Implement logic to set timed check
@@ -210,6 +203,7 @@ def set_timed_check():
         pst.save_settings()
         return jsonify(status=1, data={})
 
+
 @app.route('/api/v1/camera/cancel-timed-check', methods=['POST'])
 def cancel_timed_check():
     # Implement logic to cancel timed check
@@ -219,6 +213,7 @@ def cancel_timed_check():
         pst.settings['capture']['running'] = False
         pst.save_settings()
         return jsonify(status=1, data={})
+
 
 @app.route('/api/v1/camera/<string:camera_id>/get-timed-check-result', methods=['GET'])
 def get_timed_check_result(camera_id):
