@@ -219,14 +219,31 @@ def cancel_timed_check():
 def get_timed_check_result(camera_id):
     if camera_id not in pst.settings['cameras']:
         return jsonify(status=0, data=dict(message=f"相机{camera_id}不存在"))
-    """
     if pst.settings['capture']['running'] == False:
         return jsonify(status=0, data=dict(message="检测没有在运行中"))
     if pst.settings['capture']['start_time'] is None:
         return jsonify(status=0, data=dict(message="检测没有在运行中"))
     if pst.settings['capture']['start_time'] > time.time():
         return jsonify(status=0, data=dict(message="检测没有在运行中"))
-    offsets = dict()
+    offsets = dict(
+        camera=camera_id,
+        algorithm=pst.settings['capture']['algorithm'],
+        sample=pst.settings['capture']['sampleNumber'],
+        interval=pst.settings['capture']['interval'],
+        start_time=pst.settings['capture']['start_time'],
+        results=[]
+    )
+    ckpt_time = af.checkpoint_data['checkpoint_time']
+    marker_offset = []
+    for rc in af.checkpoint_data['results']:
+        if rc['camera_id'] == camera_id:
+            mk = dict(
+                marker=rc['marker_id'],
+                offset=[rc['offset_x'], rc['offset_y']]
+            )
+            marker_offset.append(mk)
+            break
+    offsets['results'].append(dict(datetime=ckpt_time, marker_offset=marker_offset))
     """
     ret = {
         "status": 1,
@@ -253,7 +270,9 @@ def get_timed_check_result(camera_id):
             ]
         }
     }
-    return jsonify(ret)
+    """
+    
+    return jsonify(status=1, data=offsets)
     
 
 @app.route('/api/v1/remote-server/set', methods=['POST'])
