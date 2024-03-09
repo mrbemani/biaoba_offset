@@ -2,6 +2,9 @@
 
 import os
 import time
+from datetime import datetime
+import traceback
+import requests
 import cv2
 import avgpixel
 import threading
@@ -9,14 +12,92 @@ import tsutil as tsu
 import persist as pst
 import target as tg
 
+# config log to file
+import logging
+tslogger = logging.getLogger('app_logger')
+tslogger.setLevel(logging.DEBUG)
+fh = logging.FileHandler('app.log')
+fh.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+tslogger.addHandler(fh)
+
+
+
+
+
 try:
     import cam
 except:
     print ("Failed to import camera!!!")
     exit(1)
 
+from queue import Queue
+
 
 worker = None
+deinit = False
+checkpoint_data = dict()
+
+
+"""
+{
+  "checkpoint_time": "2020-05-01 12:00:00",  // 检测时间
+  "reference_time": "2020-01-01 12:00:00",   // 参照时间
+  "results": [
+    {   
+        "camera_id": "002345033344",      // 相机ID
+        "marker_id": "1234567890",        // 标靶ID
+        "dx": 1.0,                         // 位移x (mm)
+        "dy": 2.0,                         // 位移y (mm)
+    },
+    {
+        "camera_id": "002345033344",
+        "marker_id": "1234567891",
+        "dx": 1.0,
+        "dy": 2.0
+    },
+    //...
+  ]
+}
+"""
+def submit_checkpoint(checkpoint_data):
+    # reformat checkpoint_data
+    cpdfmt = dict()
+    cpdfmt['reference_time'] = pst.settings['capture']['start_time']
+    cpdfmt['results'] = []
+    for camera_id in checkpoint_data:
+        for marker_id in checkpoint_data[camera_id]:
+            x = checkpoint_data[camera_id][marker_id]['x']
+            y = checkpoint_data[camera_id][marker_id]['y']
+            mmpp = checkpoint_data[camera_id][marker_id]['mmpp']
+            cpdfmt['results'].append(dict(camera_id=camera_id, 
+                                          marker_id=marker_id, 
+                                          dx=x*mmpp, 
+                                          dy=y*mmpp))
+    cpdfmt['checkpoint_time'] = datetime.now().isoformat()
+    # submit checkpoint_data to server1 and server2 if available
+    try:
+        if 'server1' in pst.settings['remote_server']:
+            url = pst.settings['remote_server']['server1']
+            headers = {'Content-Type': 'application/json'}
+            response = requests.post(url, json=cpdfmt, headers=headers, timeout=10)
+            if response.status_code != 200:
+                tslogger.warning(f"Failed to submit checkpoint data to server1: {response.status_code}")
+                print (f"Failed to submit checkpoint data to server1: {response.status_code}")
+        if 'server2' in pst.settings['remote_server']:
+            url = pst.settings['remote_server']['server2']
+            headers = {'Content-Type': 'application/json'}
+            response = requests.post(url, json=cpdfmt, headers=headers, timeout=10)
+            if response.status_code != 200:
+                tslogger.warning(f"Failed to submit checkpoint data to server2: {response.status_code}")
+                print (f"Failed to submit checkpoint data to server2: {response.status_code}")
+    except:
+        tslogger.error("Failed to submit checkpoint data")
+        tslogger.error(traceback.format_exc())
+        print ("Failed to submit checkpoint data")
+        print (traceback.format_exc())
+            
 
 
 def get_image(camera_id, save_file, nPhoto=20):
@@ -58,7 +139,7 @@ def perform_comparison(camera_id):
         MARKER_DIAMETER = pst.settings['cameras'][camera_id]['markers'][marker_id]['size'] * 1000.0
         x, y, mmpp = compare_marker(b_roi, t_roi, MARKER_DIAMETER)
         if x is not None and y is not None and mmpp is not None:
-            offsets[marker_id] = dict(x=x, y=y, mmpp=mmpp)
+            offsets[marker_id] = dict(x=x, y=y, mmpp=mmpp, time=datetime.now().isoformat())
     return offsets, True, "Success"
 
 
@@ -72,6 +153,8 @@ def compare_marker(base_marker_image, target_marker_image, MARKER_DIAMETER):
 
 def capture_check_thread():
     while True:
+        if deinit is True:
+            break
         if type(pst.settings) is not dict:
             time.sleep(5)
             continue
@@ -90,26 +173,63 @@ def capture_check_thread():
         if pst.settings['capture']['start_time'] > time.time():
             time.sleep(5)
             continue
-
         try:
+            not_ready = False
             for camera_id in pst.settings['cameras']:
-                offsets, success, message = perform_comparison(camera_id)
-                if success:
-                    for marker_id in offsets:
-                        pst.save_offset(camera_id, marker_id, offsets[marker_id])
-                else:
-                    print (f"Failed to compare marker for camera {camera_id}: {message}")
+                if camera_id not in cam.cameras:
+                    not_ready = True
+                    continue
+                if 'markers' not in pst.settings['cameras'][camera_id]:
+                    not_ready = True
+                    continue
+                if len(pst.settings['cameras'][camera_id]['markers']) == 0:
+                    not_ready = True
+                    continue
+                if not os.path.exists(os.path.join("offsets", str(camera_id))):
+                    os.makedirs(os.path.join("offsets", str(camera_id)))
+                base_image_file = os.path.join("offsets", str(camera_id), "base_image.bmp")
+                if not os.path.exists(base_image_file):
+                    not_ready = True
+            if not not_ready:
+                checkpoint_data.clear()
+                for camera_id in pst.settings['cameras']:
+                    offsets, success, message = perform_comparison(camera_id)
+                    if success:
+                        for marker_id in offsets:
+                            pst.save_offset_data(camera_id, marker_id, offsets[marker_id])
+                        checkpoint_data[camera_id] = offsets
+                    else:
+                        print (f"Failed to compare marker for camera {camera_id}: {message}")
+                        break
+                if len(checkpoint_data) > 0:
+                    try:
+                        submit_checkpoint(checkpoint_data)
+                    except:
+                        tslogger.error("Failed to submit checkpoint data")
+                        tslogger.error(traceback.format_exc())
+                        print ("Failed to submit checkpoint data")
+                        print (traceback.format_exc())
+            time.sleep(60*60*pst.settings['capture']['interval'])
         except:
+            tslogger.error("Failed to perform comparison")
+            tslogger.error(traceback.format_exc())
             print ("Failed to perform comparison")
             print (traceback.format_exc())
-        time.sleep(60*60*24)
+            time.sleep(10)
 
 
-while True:
-    try:
-        if worker is not None:
-                        
-    except:
-        pass
-    time.sleep(1)
+def appfuncs_deinit():
+    global worker, deinit
+    deinit = True
+    if worker is not None:
+        worker.join()
+        worker = None
+
+import atexit
+atexit.register(appfuncs_deinit)
+
+worker = threading.Thread(target=capture_check_thread)
+worker.daemon = True
+worker.start()
+
 

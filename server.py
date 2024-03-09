@@ -170,7 +170,7 @@ def capture_reference_image():
     pst.settings['capture'] = dict(
         algorithm=req['algorithm'], 
         automate=bool(req['capture'] == "自动"), 
-        frequency=float(req['frequency']), 
+        interval=float(req['frequency']), 
         sampleNumber=int(req['sampleNumber']),
         running = False,
         start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -289,7 +289,7 @@ if __name__ == '__main__':
         pst.settings['capture'] = dict(
             algorithm="optical-flow", 
             automate=True, 
-            frequency=24, 
+            interval=24, 
             sampleNumber=20,
             running = False,
             start_time = None

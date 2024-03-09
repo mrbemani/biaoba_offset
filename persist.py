@@ -64,81 +64,20 @@ def reset_offset_data(marker_uri):
         return False
 
 
-def load_offset_data(camera_id):
+def save_offset_data(camera_id, marker_id, offset_data):
     """
-    Load offset data from offset.json
+    Save offset data to disk
     """
-    logger.debug(f'Loading offset data for marker {camera_id}')
+    logger.debug(f'Saving offset data for marker {camera_id}.{marker_id}')
+    offset_data_dir = os.path.join("offsets", camera_id, "check_log")
     try:
-        offset_data_dir = os.path.join("offsets", camera_id, "markers")
+        # append to marker file
         if not os.path.exists(offset_data_dir):
             os.makedirs(offset_data_dir)
-        if not os.path.exists(os.path.join(offset_data_dir, 'history.yaml')):
-            return dict()
-        _offset_file = json.load(open(os.path.join(offset_data_dir, 'history.yaml'), 'r', encoding='utf-8'))
-        for offset in _offset_file['offsets']:
-            offset['time'] = datetime.fromtimestamp(offset['time'])
-        return _offset_file['offsets']
+        with open(os.path.join(offset_data_dir, f'{marker_id}.dat'), 'a', encoding='utf-8') as f:
+            f.write(f"{offset_data['time']}||{offset_data['mmpp']}||{offset_data['x']}||{offset_data['y']}\n")
     except:
-        logger.error(f'Failed to load offset data for marker {camera_id}')
+        logger.error(f'Failed to save offset data for marker {camera_id}.{marker_id}')
         logger.error(traceback.format_exc())
-        return []
-
-def save_offset_data(marker_uri, offset_data):
-    """
-    Save offset data to offset.json
-    """
-    logger.debug(f'Saving offset data for marker {marker_uri}')
-    _save_data = []
-    for offset in offset_data:
-        if isinstance(offset['time'], datetime) and offset['time'].timestamp() > 0:
-            _save_data.append(dict(time=offset['time'].timestamp(), x=offset['x'], y=offset['y']))
-        elif isinstance(offset['time'], float) and offset['time'] > 0:
-            _save_data.append(dict(time=offset['time'], x=offset['x'], y=offset['y']))
-        elif isinstance(offset['time'], int) and offset['time'] > 0:
-            _save_data.append(dict(time=offset['time'], x=offset['x'], y=offset['y']))
-        else:
-            logger.error(f'Unknown time format: {type(offset["time"])}')
-
-    if len(_save_data) == 0:
-        logger.error(f'No valid offset data to save for marker {marker_uri}')
         return False
-    
-    if not isinstance(_save_data[0]['time'], float):
-        logger.error(f'Invalid time format: {type(_save_data[0]["time"])}')
-        return False
-
-    camera_id, marker_id = marker_uri.split('.')
-    offset_data_dir = os.path.join("offsets", camera_id, marker_id)
-    if not os.path.exists(offset_data_dir):
-        os.makedirs(offset_data_dir)
-    with open(os.path.join(offset_data_dir, 'offset.json'), 'w', encoding='utf-8') as f:
-        json.dump(_save_data, f, ensure_ascii=False, indent=4)
     return True
-
-
-def append_offset_data(marker_uri, offset_time, offset_x, offset_y, offset_z=0.0):
-    """
-    Append offset data to offset.json
-    """
-    logger.debug(f'Appending offset data for marker {marker_uri}')
-    try:
-        camera_id, marker_id = marker_uri.split('.')
-        offset_data_dir = os.path.join("offsets", camera_id, marker_id)
-        if not os.path.exists(offset_data_dir):
-            os.makedirs(offset_data_dir)
-        if not os.path.exists(os.path.join(offset_data_dir, 'offset.json')):
-            with open(os.path.join(offset_data_dir, 'offset.json'), 'w', encoding='utf-8') as f:
-                json.dump(dict(offsets=[]), f, ensure_ascii=False, indent=4)
-        _offset_file = json.load(open(os.path.join(offset_data_dir, 'offset.json'), 'r', encoding='utf-8'))
-        for offset in _offset_file['offsets']:
-            offset['time'] = datetime.fromtimestamp(offset['time'])
-        _offset_data = _offset_file['offsets']
-        _offset_data.append(dict(time=offset_time, x=offset_x, y=offset_y, z=offset_z))
-        save_offset_data(marker_uri, _offset_data)
-        return True
-    except:
-        logger.error(f'Failed to append offset data for marker {marker_uri}')
-        logger.error(traceback.format_exc())
-        return False
-
