@@ -244,34 +244,6 @@ def get_timed_check_result(camera_id):
             marker_offset.append(mk)
             break
     offsets['results'].append(dict(datetime=ckpt_time, marker_offset=marker_offset))
-    """
-    ret = {
-        "status": 1,
-        "data": {
-            "camera": camera_id,
-            "algorithm": "optical-flow",
-            "sample": 10,
-            "interval": 24,
-            "start_time": "2019-01-01 12:00:00",
-            "results": [
-                {
-                    "datetime": "2019-01-01 12:00:00",
-                    "marker_offset": [
-                        {
-                            "marker": "a",
-                            "offset": [1.0, 0.0]
-                        },
-                        {
-                            "marker": "b",
-                            "offset": [0.0, 1.0]
-                        }
-                    ]
-                }
-            ]
-        }
-    }
-    """
-    
     return jsonify(status=1, data=offsets)
     
 

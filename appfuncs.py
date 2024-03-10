@@ -170,7 +170,12 @@ def capture_check_thread():
         if pst.settings['capture']['start_time'] is None:
             time.sleep(5)
             continue
-        if pst.settings['capture']['start_time'] > time.time():
+        try:
+            capture_start_timestamp = datetime.strptime(pst.settings['capture']['start_time'], "%Y-%m-%d %H:%M:%S").timestamp()
+            if capture_start_timestamp > time.time():
+                time.sleep(5)
+                continue
+        except:
             time.sleep(5)
             continue
         try:
