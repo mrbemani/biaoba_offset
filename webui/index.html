@@ -390,30 +390,6 @@
             <div class="layui-tab-item">
               <form class="layui-form form-upload" action="" lay-filter="formUpload">
                 <div class="layui-form-item">
-                  <label class="layui-form-label">数据预处理方法</label>
-                  <div class="layui-input-block">
-                    <select name="pretreat" lay-verify="required">
-                      <option value="0">默认/自定义</option>
-                      <option value="1">预处理方法一</option>
-                      <option value="2">预处理方法二</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="layui-form-item">
-                  <label class="layui-form-label">采集设备编号</label>
-                  <div class="layui-input-block">
-                    <input
-                      type="text"
-                      name="serial"
-                      required
-                      lay-verify="required"
-                      placeholder="请输入采集设备编号"
-                      autocomplete="off"
-                      class="layui-input"
-                    />
-                  </div>
-                </div>
-                <div class="layui-form-item">
                   <label class="layui-form-label">服务器地址一</label>
                   <div class="layui-input-block">
                     <input
@@ -657,6 +633,8 @@
                 .then(res => {
                   if (res.status === 1) {
                     layer.msg('相机标定完成', { icon: 1 })
+                  } else {
+                    layer.msg(res.data.message)
                   }
                 })
                 .catch(err => {
@@ -726,7 +704,10 @@
                 .post('/api/v1/remote-server/set', data.field)
                 .then(res => {
                   if (res.status === 1) {
-                    layer.msg('数据上传成功！')
+                    layer.msg('服务器地址设置成功！')
+                  }
+                  else {
+                    layer.msg(res.data.message)
                   }
                 })
                 .catch(err => {
@@ -743,6 +724,8 @@
                 .then(res => {
                   if (res.status === 1) {
                     layer.msg('初始化成功！')
+                  } else {
+                    layer.msg(res.data.message)
                   }
                 })
                 .catch(err => {
