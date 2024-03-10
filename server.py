@@ -11,6 +11,8 @@ from flask import Flask, jsonify, request, render_template, redirect, url_for, s
 from flask_cors import CORS
 import appfuncs as af
 
+import ts_mono_calib as tsmcalib
+
 try:
     import cam
 except:
@@ -130,7 +132,37 @@ def set_camera():
 @app.route('/api/v1/camera/calibrate', methods=['POST'])
 def calibrate_camera():
     print (request.get_json())
-    return jsonify(status=1, data={})
+    # {'id': 'K71601263', 'checkerboard': {'width': '3', 'height': '4', 'size': '0.05', 'images': 'd:\\calib'}}
+    req_data = request.get_json()
+    cam_id = req_data['id']
+    if cam_id not in pst.settings['cameras']:
+        return jsonify(status=0, data=dict(message="相机不存在"))
+    if 'checkerboard' not in req_data:
+        return jsonify(status=0, data=dict(message="缺少标定板参数"))
+    ckbd = req_data['checkerboard']
+    if 'width' not in ckbd or 'height' not in ckbd or 'size' not in ckbd or 'images' not in ckbd:
+        return jsonify(status=0, data=dict(message="标定板参数不完整"))
+    if not os.path.exists(ckbd['images']):
+        return jsonify(status=0, data=dict(message="标定板图片路径不存在"))
+    if not os.path.isdir(ckbd['images']):
+        return jsonify(status=0, data=dict(message="标定板图片路径不是目录"))
+    if len(os.listdir(ckbd['images'])) == 0:
+        return jsonify(status=0, data=dict(message="标定板图片路径为空"))
+
+    ckbd['width'] = int(ckbd['width'])
+    ckbd['height'] = int(ckbd['height'])
+    ckbd['size'] = float(ckbd['size'])
+    ckbd['images'] = os.path.abspath(ckbd['images'])
+
+    ret, (retVal, camMat, distMat, rvecs, tvecs) = tsmcalib.calibrate_mono_camera((ckbd['width'], ckbd['height']), ckbd['size'], ckbd['images'])
+
+    if ret == 0:
+        pst.settings['cameras'][cam_id]['intrinsics'] = camMat.tolist()
+        pst.settings['cameras'][cam_id]['distortion'] = distMat.tolist()
+        pst.save_settings()
+        return jsonify(status=1, data=dict(message="标定成功"))
+    else:
+        return jsonify(status=0, data=dict(message="标定失败"))
 
 @app.route('/api/v1/camera/<string:camera_id>/list-markers', methods=['GET'])
 def list_markers(camera_id):
