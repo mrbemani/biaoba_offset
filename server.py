@@ -180,19 +180,24 @@ def list_markers(camera_id):
 def set_markers(camera_id):
     if 'markers' not in request.get_json():
         return jsonify(status=0, data="invalid request")
+    print (request.get_json())
     markers = request.get_json()['markers']
     if camera_id not in pst.settings['cameras']:
         return jsonify(status=0, data="invalid camera id")
     pst.settings['cameras'][camera_id]['markers'] = dict()
     for marker in markers:
+        pos = marker['position']
+        rot = marker['rotation']
+        roi = marker['roi']
+        print (pos, rot, roi)
         mk_obj = dict(
             id=marker['id'], 
             name=marker['name'], 
             type=marker['type'],
-            position=marker['position'] if type(marker['position']) in [list, tuple] else [float(x) for x in marker['position'].split(',')],
-            rotation=marker['rotation'] if type(marker['rotation']) in [list, tuple] else [float(x) for x in marker['rotation'].split(',')],
+            position=[float(x) for x in str(pos).split(',')],
+            rotation=[float(x) for x in str(rot).split(',')],
             size=float(marker['size']),
-            roi=[float(x) for x in marker['roi'].split(',')],
+            roi=[float(x) for x in str(roi).split(',')],
         )
         pst.settings['cameras'][camera_id]['markers'][marker['id']] = mk_obj
     pst.save_settings()
