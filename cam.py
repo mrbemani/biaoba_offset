@@ -348,7 +348,7 @@ def Save_Bmp(cam, buf_save_image, st_frame_info, bLock=True):
     ret = cam['deviceHandle'].MV_CC_SaveImageToFileEx(stSaveParam)
 
     cam['savedFiles'].append(file_path)
-    if len(cam['savedFiles']) > nSaveNum + 1:
+    if len(cam['savedFiles']) > nSaveNum:
         # remove the first file
         sf = cam['savedFiles'].pop(0)
         try:
