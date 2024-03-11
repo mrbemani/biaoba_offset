@@ -12,6 +12,17 @@
       <div class="left__side__box">
         <canvas id="canvas" width="798" height="598"></canvas>
 
+        <button
+          v-if="data.currentCamera.id !== ''"
+          class="layui-btn layui-btn-success update__camera__frame"
+          lay-submit
+          id="updateCameraFrame"
+          lay-filter="updateCameraFrame"
+          @click="data.updateCameraFrame"
+        >
+          刷新画面
+        </button>
+
         <div class="left__bottom">
           <div class="logs__view">
             <div class="logs__title">日志</div>
@@ -539,13 +550,15 @@
           stop: '检测执行【暂停】',
           formUploadServer: '数据上传',
           formSubmitInit: '确认检测执行【初始化】',
-          toggleMode: '切换到拖动画布模式'
+          toggleMode: '切换到拖动画布模式',
+          updateCameraFrame: '刷新画布'
         },
 
         // 获取相机列表
         getCameras() {
           api
             .get('/api/v1/camera/list') // 正式接口: /api/v1/camera/list
+            // .get('/assets/dataset/camera-list.json')
             .then(res => {
               if (res.status === 1) {
                 this.cameras = res.data.cameras
@@ -705,8 +718,7 @@
                 .then(res => {
                   if (res.status === 1) {
                     layer.msg('服务器地址设置成功！')
-                  }
-                  else {
+                  } else {
                     layer.msg(res.data.message)
                   }
                 })
@@ -799,6 +811,7 @@
             // Tips: 正式版调用以下接口
             api
               .get(`/api/v1/camera/${id}/get-frame`) // 正式接口: /api/v1/camera/${id}/get-frame
+              // .get('/assets/dataset/frame-url.json')
               .then(res => {
                 img = new Image()
                 img.src = res.data.frameurl
@@ -820,6 +833,12 @@
                 console.error(err)
               })
           }
+        },
+
+        // 更新相机画面
+        updateCameraFrame() {
+          const id = this.currentCamera.id
+          this.getCameraFrame(id)
         },
 
         // 获取相机详细信息

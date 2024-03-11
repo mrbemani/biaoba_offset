@@ -286,6 +286,7 @@ function handleMouseUp() {
   if (isDrawingMode) {
     // 结束绘制矩形
     drawImage()
+    switchAndSetMarker()
 
     // 过滤掉宽高为 0 的 rect
     rectangles = rectangles.filter(rect => rect.width > 0 && rect.height > 0)

@@ -40,6 +40,17 @@ body {
   float: left;
 }
 
+/* 刷新画面按钮 */
+.update__camera__frame {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  opacity: 0.5;
+  transition: 0.2s linear;
+}
+.update__camera__frame:hover {
+  opacity: 1;
+}
 /* 左侧摄像头图片 */
 .photo__box {
   position: absolute;
