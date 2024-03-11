@@ -798,7 +798,7 @@
           isMoveEnabled = !isMoveEnabled
           isDrawingMode = !isMoveEnabled
           selectedRectIndex = -1
-          canvas.style.cursor = isMoveEnabled ? 'grab' : 'crosshair'
+          canvas.style.cursor = isMoveEnabled ? 'grab' : 'nwse-resize'
           drawImage()
         },
 
@@ -1049,9 +1049,11 @@
       data.getCameras()
       data.showLogs()
 
-      const vue = createApp({
+      createApp({
         data
       }).mount('#app')
+
+      window.data = data
     </script>
   </body>
 </html>

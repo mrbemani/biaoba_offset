@@ -333,6 +333,7 @@ function showContextMenu(x, y) {
 function handleDeleteClick() {
   if (selectedRectIndex > -1) {
     rectangles.splice(selectedRectIndex, 1)
+    data.markers = rectangles // 更新表单中的 markers 数据
 
     drawImage()
   }
