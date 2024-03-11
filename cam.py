@@ -4,6 +4,26 @@ import os
 import atexit
 import shutil
 
+import logging
+
+cam_logger = logging.getLogger('cam_logger')
+cam_logger.setLevel(logging.DEBUG)
+# create file handler which logs even debug messages
+cam_fh = logging.FileHandler('cam.log')
+cam_fh.setLevel(logging.DEBUG)
+# create console handler with a higher log level
+cam_ch = logging.StreamHandler()
+cam_ch.setLevel(logging.ERROR)
+# create formatter and add it to the handlers
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+cam_fh.setFormatter(formatter)
+cam_ch.setFormatter(formatter)
+# add the handlers to the logger
+cam_logger.addHandler(cam_fh)
+cam_logger.addHandler(cam_ch)
+
+
+
 os_type = sys.platform
 import threading
 
@@ -114,7 +134,10 @@ def clear_saved_files(camera_id: str):
         g_rclock.acquire()
         while len(cameras[camera_id]['savedFiles']) > 2:
             f = cameras[camera_id]['savedFiles'].pop(0)
-            os.remove(f)
+            try:
+                os.remove(f)
+            except:
+                cam_logger.warn(f"Error removing file: {f}")
         g_rclock.release()
         #cameras[camera_id]['savedFiles'].clear()
 
@@ -325,9 +348,13 @@ def Save_Bmp(cam, buf_save_image, st_frame_info, bLock=True):
     ret = cam['deviceHandle'].MV_CC_SaveImageToFileEx(stSaveParam)
 
     cam['savedFiles'].append(file_path)
-    if len(cam['savedFiles']) > nSaveNum:
+    if len(cam['savedFiles']) > nSaveNum + 1:
         # remove the first file
-        os.remove(cam['savedFiles'].pop(0))
+        sf = cam['savedFiles'].pop(0)
+        try:
+            os.remove(sf)
+        except:
+            cam_logger.warn(f"Error removing file: {sf}")
         
 
     # copy to frame
