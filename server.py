@@ -189,8 +189,8 @@ def set_markers(camera_id):
             id=marker['id'], 
             name=marker['name'], 
             type=marker['type'],
-            position=[float(x) for x in marker['position'].split(',')],
-            rotation=[float(x) for x in marker['rotation'].split(',')],
+            position=marker['position'] if type(marker['position']) in [list, tuple] else [float(x) for x in marker['position'].split(',')],
+            rotation=marker['rotation'] if type(marker['rotation']) in [list, tuple] else [float(x) for x in marker['rotation'].split(',')],
             size=float(marker['size']),
             roi=[float(x) for x in marker['roi'].split(',')],
         )
