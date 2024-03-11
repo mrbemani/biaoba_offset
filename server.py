@@ -183,7 +183,9 @@ def set_markers(camera_id):
     print (request.get_json())
     markers = request.get_json()['markers']
     if camera_id not in pst.settings['cameras']:
+        print ("invalid camera id: ", camera_id, pst.settings['cameras'])
         return jsonify(status=0, data="invalid camera id")
+    print (markers)
     pst.settings['cameras'][camera_id]['markers'] = dict()
     for marker in markers:
         pos = marker['position']
