@@ -260,10 +260,16 @@ def get_timed_check_result(camera_id):
         return jsonify(status=0, data=dict(message=f"相机{camera_id}不存在"))
     if pst.settings['capture']['running'] == False:
         return jsonify(status=0, data=dict(message="检测没有在运行中"))
-    if pst.settings['capture']['start_time'] is None:
+    pst_cst = pst.settings['capture']['start_time']
+    if pst_cst is None:
         return jsonify(status=0, data=dict(message="检测没有在运行中"))
-    if pst.settings['capture']['start_time'] > time.time():
-        return jsonify(status=0, data=dict(message="检测没有在运行中"))
+    elif type(pst_cst) is str:
+        cap_start_time = datetime.fromisoformat(pst_cst).timestamp()
+        if cap_start_time > time.time():
+            return jsonify(status=0, data=dict(message="检测没有在运行中"))
+    elif type(pst_cst) in [int, float]:
+        if pst_cst > time.time():
+            return jsonify(status=0, data=dict(message="检测没有在运行中"))
     offsets = dict(
         camera=camera_id,
         algorithm=pst.settings['capture']['algorithm'],
