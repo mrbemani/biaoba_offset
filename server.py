@@ -278,6 +278,12 @@ def get_timed_check_result(camera_id):
         start_time=pst.settings['capture']['start_time'],
         results=[]
     )
+    
+    if not 'checkpoint_time' in af.checkpoint_data:
+        return jsonify(status=0, data=dict(message="检测结果未准备好"))
+    if not 'results' in af.checkpoint_data:
+        return jsonify(status=0, data=dict(message="检测结果未准备好"))
+    
     ckpt_time = af.checkpoint_data['checkpoint_time']
     marker_offset = []
     for rc in af.checkpoint_data['results']:
