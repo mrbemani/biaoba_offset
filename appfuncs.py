@@ -80,6 +80,8 @@ def submit_checkpoint(checkpoint_data):
     try:
         if 'server1' in pst.settings['remote_server']:
             url = pst.settings['remote_server']['server1']
+            if not url.startswith("http://"):
+                return
             headers = {'Content-Type': 'application/json'}
             response = requests.post(url, json=cpdfmt, headers=headers, timeout=10)
             if response.status_code != 200:
@@ -87,6 +89,8 @@ def submit_checkpoint(checkpoint_data):
                 print (f"Failed to submit checkpoint data to server1: {response.status_code}")
         if 'server2' in pst.settings['remote_server']:
             url = pst.settings['remote_server']['server2']
+            if not url.startswith("http://"):
+                return
             headers = {'Content-Type': 'application/json'}
             response = requests.post(url, json=cpdfmt, headers=headers, timeout=10)
             if response.status_code != 200:
