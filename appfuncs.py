@@ -228,6 +228,7 @@ def capture_check_thread():
                         if success and offsets is not None:
                             # save offsets in compareSamples
                             compareSamples.append(offsets)
+                            print ("Successfully performed compare marker for camera %s" % camera_id)
                         else:
                             break
                     # check if all samples are valid
@@ -248,6 +249,7 @@ def capture_check_thread():
                         y /= len(compareSamples)
                         mmpp /= len(compareSamples)
                         offsets[marker_id] = dict(x=x, y=y, mmpp=mmpp, time=datetime.now().isoformat())
+                        print ("averaged result for camera %s marker %s" % (camera_id, marker_id))
                     # save averaged offsets
                     if success:
                         print (f"Success to compare marker for camera {camera_id}")
