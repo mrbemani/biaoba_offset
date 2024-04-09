@@ -250,6 +250,7 @@ def capture_check_thread():
                         offsets[marker_id] = dict(x=x, y=y, mmpp=mmpp, time=datetime.now().isoformat())
                     # save averaged offsets
                     if success:
+                        print (f"Success to compare marker for camera {camera_id}")
                         for marker_id in offsets:
                             pst.save_offset_data(camera_id, marker_id, offsets[marker_id])
                         checkpoint_data[camera_id] = offsets
