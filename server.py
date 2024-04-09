@@ -10,7 +10,8 @@ import threading
 from flask import Flask, jsonify, request, render_template, redirect, url_for, send_from_directory
 from flask_cors import CORS
 import appfuncs as af
-
+import cv2
+import numpy as np
 import ts_mono_calib as tsmcalib
 
 try:
@@ -43,6 +44,13 @@ def index():
 @app.route('/assets/<path:path>', methods=['GET'])
 def send_assets(path):
     return send_from_directory('webui/assets', path)
+
+@app.route('/offset_plots/<string:camera_id>/<string:marker_id>', methods=['GET'])
+def get_offset_plot(camera_id, marker_id):
+    # send image file
+    if not os.path.exists(f'offsets/{camera_id}/{marker_id}_offset.png'):
+        return send_from_directory('webui/assets', 'no_data.png')
+    return send_from_directory(f'offsets/{camera_id}', f'{marker_id}_offset.png')
 
 @app.route('/api/v1/camera/list', methods=['GET'])
 def get_camera_list():
@@ -227,7 +235,7 @@ def capture_reference_image():
             shutil.rmtree(os.path.join("offsets", str(camera_id), "check_data"))
         os.makedirs(os.path.join("offsets", str(camera_id), "check_data"))
         sample_num = pst.settings['capture']['sampleNumber']
-        threading.Thread(target=af.get_image, args=(camera_id, base_image_path, sample_num)).start()
+        threading.Thread(target=af.get_image, args=(camera_id, base_image_path)).start()
         time.sleep(1)
     return jsonify(status=1, data={})
     
@@ -284,17 +292,12 @@ def get_timed_check_result(camera_id):
     if not 'results' in af.checkpoint_data:
         return jsonify(status=0, data=dict(message="检测结果未准备好"))
     
-    ckpt_time = af.checkpoint_data['checkpoint_time']
-    marker_offset = []
-    for rc in af.checkpoint_data['results']:
-        if rc['camera_id'] == camera_id:
-            mk = dict(
-                marker=rc['marker_id'],
-                offset=[rc['offset_x'], rc['offset_y']]
-            )
-            marker_offset.append(mk)
-            break
-    offsets['results'].append(dict(datetime=ckpt_time, marker_offset=marker_offset))
+    print (af.checkpoint_data)
+    # return plot images of offsets
+    for camera_id in pst.settings['cameras']:
+        for marker_id in pst.settings['cameras'][camera_id]['markers']:
+            if not os.path.exists(f'offsets/{camera_id}/{marker_id}_offset.png'):
+                offsets['results'].append(f"/offset_plots/{camera_id}/{marker_id}")
     return jsonify(status=1, data=offsets)
     
 

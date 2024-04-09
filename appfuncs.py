@@ -6,6 +6,8 @@ from datetime import datetime
 import traceback
 import requests
 import cv2
+import numpy as np
+import matplotlib.pyplot as plt
 import avgpixel
 import threading
 import tsutil as tsu
@@ -38,7 +40,6 @@ from queue import Queue
 worker = None
 deinit = False
 checkpoint_data = dict()
-
 
 """
 {
@@ -103,15 +104,31 @@ def submit_checkpoint(checkpoint_data):
         print (traceback.format_exc())
             
 
+def plot_offsets(camera_id):
+    # draw offsets of a camera
+    offsets = pst.load_offset_data(camera_id)
+    # draw each marker's offsets in a figure
+    for marker_id in offsets:
+        plt.figure()
+        plt.plot(offsets[marker_id]['x'] * offsets[marker_id]['mmpp'], 
+                 offsets[marker_id]['y'] * offsets[marker_id]['mmpp'], 
+                 'ro')
+        plt.xlabel('x (mm)')
+        plt.ylabel('y (mm)')
+        plt.title(f'Camera {camera_id} Marker {marker_id} Offsets')
+        plt.grid()
+        # save figure
+        plt.savefig(f'offsets/{camera_id}/{marker_id}_offset.png')
 
-def get_image(camera_id, save_file, nPhoto=20):
+
+def get_image(camera_id, save_file):
     camdev = cam.cameras[camera_id]['deviceHandle']
-    cam.nSaveNum = nPhoto
+    cam.nSaveNum = 10
     cam.bSaveBmp = True
     #cam.start_camera(camera_id, autoGrab=True)
     cam.clear_saved_files(camera_id=camera_id)
     base_image_array = []
-    while len(cam.cameras[camera_id]['savedFiles']) < nPhoto:
+    while len(cam.cameras[camera_id]['savedFiles']) < 10:
         time.sleep(1)
     for f in cam.cameras[camera_id]['savedFiles']:
         im = cv2.imread(f, 0)
@@ -124,7 +141,7 @@ def get_image(camera_id, save_file, nPhoto=20):
 def perform_comparison(camera_id):
     # capture and save target_image
     target_image_file = os.path.join("offsets", str(camera_id), "target_image.bmp")
-    get_image(camera_id, target_image_file, nPhoto=20)
+    get_image(camera_id, target_image_file, nPhoto=10)
     target_image = cv2.imread(target_image_file, cv2.IMREAD_GRAYSCALE)
     if target_image is None:
         return None, False, "目标图像加载失败"
@@ -202,7 +219,36 @@ def capture_check_thread():
             if not not_ready:
                 checkpoint_data.clear()
                 for camera_id in pst.settings['cameras']:
-                    offsets, success, message = perform_comparison(camera_id)
+                    # perform comparison for each marker in each camera and save offsets
+                    sampleNumber = int(pst.settings['capture']['sampleNumber']) or 1
+                    compareSamples = []
+                    # capture and compare target with base image
+                    for i in range(sampleNumber):
+                        offsets, success, message = perform_comparison(camera_id)
+                        if success and offsets is not None:
+                            # save offsets in compareSamples
+                            compareSamples.append(offsets)
+                        else:
+                            break
+                    # check if all samples are valid
+                    if len(compareSamples) == 0:
+                        print (f"Failed to compare marker for camera {camera_id}: {message}")
+                        break
+                    # perform average
+                    offsets = dict()
+                    for marker_id in compareSamples[0]:
+                        x = 0.0
+                        y = 0.0
+                        mmpp = 0.0
+                        for i in range(len(compareSamples)):
+                            x += compareSamples[i][marker_id]['x']
+                            y += compareSamples[i][marker_id]['y']
+                            mmpp += compareSamples[i][marker_id]['mmpp']
+                        x /= len(compareSamples)
+                        y /= len(compareSamples)
+                        mmpp /= len(compareSamples)
+                        offsets[marker_id] = dict(x=x, y=y, mmpp=mmpp, time=datetime.now().isoformat())
+                    # save averaged offsets
                     if success:
                         for marker_id in offsets:
                             pst.save_offset_data(camera_id, marker_id, offsets[marker_id])
@@ -218,7 +264,7 @@ def capture_check_thread():
                         tslogger.error(traceback.format_exc())
                         print ("Failed to submit checkpoint data")
                         print (traceback.format_exc())
-            time.sleep(60*60*pst.settings['capture']['interval'])
+            time.sleep(60*pst.settings['capture']['interval'])
         except:
             tslogger.error("Failed to perform comparison")
             tslogger.error(traceback.format_exc())

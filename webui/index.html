@@ -917,6 +917,9 @@
                   sample: 10,
                   save_path: 'd:/temp'
                 })
+              },
+              cancel: function () {
+                layer.closeAll()
               }
             })
           })
@@ -924,13 +927,7 @@
 
         // 检测执行【开始】：设置定时对比
         setIntervalCheck() {
-          const _this = this
-          const id = _this.currentCamera.id
-          if (!id) {
-            layer.msg('请选择相机！')
-            return
-          }
-
+          const _this = this;
           _this.getIntervalCheckResult()
 
           api
@@ -987,11 +984,7 @@
                   let list = ''
 
                   datas.forEach(data => {
-                    const offsets = data.marker_offset
-                    list += `<dt>时间：${data.datetime}</dt>`
-                    offsets.forEach(offset => {
-                      list += `<dd><span class="marker">测点${offset.marker}：</span><span class="x">x ${offset.offset[0]}</span><span class="y">y ${offset.offset[0]}</span></dd>`
-                    })
+                    list += `<img src="${data}"><br/>`
                   })
                   realtimeDataList.innerHTML = list
                 }

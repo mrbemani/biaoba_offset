@@ -81,3 +81,54 @@ def save_offset_data(camera_id, marker_id, offset_data):
         logger.error(traceback.format_exc())
         return False
     return True
+
+
+def load_offset_data(camera_id):
+    """
+    Load offset data from disk
+    """
+    logger.debug(f'Loading offset data for camera {camera_id}')
+    offset_data_dir = os.path.join("offsets", camera_id, "check_log")
+    try:
+        if not os.path.exists(offset_data_dir):
+            os.makedirs(offset_data_dir)
+        offset_data = {}
+        for marker_file in os.listdir(offset_data_dir):
+            with open(os.path.join(offset_data_dir, marker_file), 'r', encoding='utf-8') as f:
+                f_lines = f.readlines()
+                marker_id = marker_file.split('.')[0]
+                offset_data[marker_id] = dict()
+                offset_data[marker_id]['time'] = []
+                offset_data[marker_id]['mmpp'] = []
+                offset_data[marker_id]['x'] = []
+                offset_data[marker_id]['y'] = []
+                for line in f_lines:
+                    line_data = line.split('||')
+                    offset_data[marker_id]['time'].append(line_data[0])
+                    offset_data[marker_id]['mmpp'].append(float(line_data[1]))
+                    offset_data[marker_id]['x'].append(float(line_data[2]))
+                    offset_data[marker_id]['y'].append(float(line_data[3]))
+        return offset_data
+    except:
+        logger.error(f'Failed to load offset data for camera {camera_id}')
+        logger.error(traceback.format_exc())
+        return None
+    
+
+def get_offset_images():
+    """
+    Get offset images
+    """
+    logger.debug('Getting offset images')
+    try:
+        offset_images = []
+        for camera_id in settings['cameras']:
+            for marker_id in settings['cameras'][camera_id]['markers']:
+                marker_offset_image = os.path.join("offsets", camera_id, marker_id + "_offset.png")
+                if os.path.exists(marker_offset_image):
+                    offset_images.append(marker_offset_image)
+        return offset_images
+    except:
+        logger.error('Failed to get offset images')
+        logger.error(traceback.format_exc())
+        return None
