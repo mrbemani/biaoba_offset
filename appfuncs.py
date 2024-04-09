@@ -253,6 +253,7 @@ def capture_check_thread():
                         for marker_id in offsets:
                             pst.save_offset_data(camera_id, marker_id, offsets[marker_id])
                         checkpoint_data[camera_id] = offsets
+                        plot_offsets(camera_id)
                     else:
                         print (f"Failed to compare marker for camera {camera_id}: {message}")
                         break
