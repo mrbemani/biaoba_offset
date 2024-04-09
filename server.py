@@ -294,9 +294,10 @@ def get_timed_check_result(camera_id):
     
     print (af.checkpoint_data)
     # return plot images of offsets
-    for camera_id in pst.settings['cameras']:
+    #for camera_id in pst.settings['cameras']:
+    if True:
         for marker_id in pst.settings['cameras'][camera_id]['markers']:
-            if not os.path.exists(f'offsets/{camera_id}/{marker_id}_offset.png'):
+            if os.path.exists(f'offsets/{camera_id}/{marker_id}_offset.png'):
                 offsets['results'].append(f"/offset_plots/{camera_id}/{marker_id}")
     return jsonify(status=1, data=offsets)
     
