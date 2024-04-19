@@ -110,6 +110,7 @@ def plot_offsets(camera_id):
     # draw each marker's offsets in a figure
     for marker_id in offsets:
         plt.figure()
+        print (offsets[marker_id]['x'], offsets[marker_id]['y'], offsets[marker_id]['mmpp'])
         plt.plot(offsets[marker_id]['x'] * offsets[marker_id]['mmpp'], 
                  offsets[marker_id]['y'] * offsets[marker_id]['mmpp'], 
                  'ro')
