@@ -141,7 +141,7 @@ def get_image(camera_id, save_file):
 def perform_comparison(camera_id):
     # capture and save target_image
     target_image_file = os.path.join("offsets", str(camera_id), "target_image.bmp")
-    get_image(camera_id, target_image_file, nPhoto=10)
+    get_image(camera_id, target_image_file)
     target_image = cv2.imread(target_image_file, cv2.IMREAD_GRAYSCALE)
     if target_image is None:
         return None, False, "目标图像加载失败"
