@@ -87,6 +87,7 @@ def get_camera_frame_jpg(camera_id):
     logger.debug(f'Getting frame for camera {camera_id}')
     frames = [x for x in os.listdir(f'tmp/{camera_id}/') if x.endswith('.bmp')]
     frames.sort()
+    print ("get-frame:", frames)
     if frames is None or len(frames) == 0:
         return send_from_directory('webui/assets', 'noimage.png')
     return send_from_directory(f'tmp/{camera_id}', frames[-1])

@@ -110,11 +110,19 @@ def plot_offsets(camera_id):
     # draw each marker's offsets in a figure
     for marker_id in offsets:
         plt.figure()
-        plt.plot(np.float32(offsets[marker_id]['x']) * np.float32(offsets[marker_id]['mmpp']), 
-                 np.float32(offsets[marker_id]['y']) * np.float32(offsets[marker_id]['mmpp']), 
-                 'ro')
-        plt.xlabel('x (mm)')
-        plt.ylabel('y (mm)')
+        # plot line chart
+        plt.plot(
+            offsets[marker_id]['time'],
+            np.float32(offsets[marker_id]['x']) * np.float32(offsets[marker_id]['mmpp']), 
+            marker='o', linestyle='-', color='b'
+        )
+        plt.plot(
+            offsets[marker_id]['time'],
+            np.float32(offsets[marker_id]['y']) * np.float32(offsets[marker_id]['mmpp']), 
+            marker='o', linestyle='-', color='r'
+        )        
+        plt.xlabel('datetime')
+        plt.ylabel('x, y (mm)')
         plt.title(f'Camera {camera_id} Marker {marker_id} Offsets')
         plt.grid()
         # save figure
@@ -157,7 +165,7 @@ def perform_comparison(camera_id):
         marker_crop = [int(marker_roi[0]*w), int(marker_roi[1]*h), int(marker_roi[2]*w), int(marker_roi[3]*h)]
         t_roi = target_image[marker_crop[1]:marker_crop[1]+marker_crop[3], marker_crop[0]:marker_crop[0]+marker_crop[2]]
         b_roi = base_image[marker_crop[1]:marker_crop[1]+marker_crop[3], marker_crop[0]:marker_crop[0]+marker_crop[2]]
-        MARKER_DIAMETER = pst.settings['cameras'][camera_id]['markers'][marker_id]['size'] * 1000.0
+        MARKER_DIAMETER = pst.settings['cameras'][camera_id]['markers'][marker_id]['size']
         x, y, mmpp = compare_marker(b_roi, t_roi, MARKER_DIAMETER)
         if x is not None and y is not None and mmpp is not None:
             offsets[marker_id] = dict(x=x, y=y, mmpp=mmpp, time=datetime.now().isoformat())
