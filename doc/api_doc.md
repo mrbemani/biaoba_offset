@@ -1,8 +1,8 @@
-# Marker Offset-Check - API Document
+# 标靶检测本地服务调用 API 文档
 
-version: 1.0
+version: 1.1
 
-author: David Shi
+author: 史祺
 
 ---
 
@@ -152,8 +152,12 @@ POST /api/v1/camera/set
         "yaw": 0.0,             // 相机偏航角 (rad)
         "pitch": 0.0,           // 相机俯仰角 (rad)
         "roll": 0.0,            // 相机滚转角 (rad)
+        "x": 0.0,               // 相机位置 x (m)
+        "y": 0.0,               // 相机位置 y (m)
+        "z": 0.0,               // 相机位置 z (m)
+        "standard": 0.0,        // 是否为基准相机 (0:否, 1:是)
         "exposure": 1000.0,     // 曝光时间 (ms)
-        "gain": 100            // 增益
+        "gain": 0               // 增益
     }
 }
 ```
@@ -179,18 +183,13 @@ POST /api/v1/camera/calibrate
 
 ```json
 {
-    "id": 1,                // 相机ID
+    "id": "abcde",              // 相机ID
     "checkerboard": {
-        "width": 9,         // 棋盘格宽度
-        "height": 6,        // 棋盘格高度
-        "size": 0.025       // 棋盘格尺寸 (m)
+        "width": 9,             // 棋盘格宽度
+        "height": 6,            // 棋盘格高度
+        "size": 0.025           // 棋盘格尺寸 (m)
     },
-    "images": [
-        "d:/temp/1.bmp",      // 图片路径, 本地路径或URL
-        "d:/temp/2.bmp",
-        "d:/temp/3.bmp",
-        ...
-    ]
+    "images": "/path/to/imgs"   // 图像路径列表
 }
 ```
 
@@ -198,20 +197,8 @@ POST /api/v1/camera/calibrate
 
 ```json
 {
-    "status": 1,        // 返回状态 1 为成功, 0 为失败
-    "data": {
-        "id": 1,                    // 相机ID
-        "name": "camera_1",         // 相机名称
-        "ip": "192.168.0.11",       // 相机IP
-        "intrinsics": [             // 内参数 (Intrinsics)
-            1.0, 0.0, 0.0,
-            0.0, 1.0, 0.0,
-            0.0, 0.0, 1.0
-        ],
-        "distortion": [             // 畸变参数 (Distortion)
-            1.0, 0.0, 0.0, 0.0, 0.0
-        ],
-    }
+    "status": 1,                // 返回状态 1 为成功, 0 为失败
+    "data": null
 }
 ```
 
@@ -241,8 +228,8 @@ GET /api/v1/camera/{ID}/list-markers
                 "id": 1,                // 标靶ID
                 "name": "marker_1",     // 标靶名称
                 "type": "circle",       // 标靶类型
-                "size": 0.10,           // 标靶尺寸 (m)
-                "roi": [                // 标靶ROI: [left, top, width, height]
+                "size": 100,            // 标靶尺寸 (mm)
+                "roi": [                // 标靶ROI (归一化): [left, top, width, height]
                     0.52, 0.75, 0.052, 0.052
                 ],
                 "position": [           // 标靶位置 (m)
@@ -288,11 +275,11 @@ POST /api/v1/camera/{ID}/set-markers
 {
     "markers": [
         {
-            "id": 1,                // 标靶ID
+            "id": "marker111",      // 标靶ID
             "name": "marker_1",     // 标靶名称
             "type": "circle",       // 标靶类型
-            "size": 0.10,           // 标靶尺寸 (m)
-            "roi": [                // 标靶ROI: [left, top, width, height]
+            "size": 100,            // 标靶尺寸 (mm)
+            "roi": [                // 标靶ROI (归一化): [left, top, width, height]
                 0.52, 0.75, 0.052, 0.052
             ],
             "position": [           // 标靶位置 (m)
@@ -303,10 +290,10 @@ POST /api/v1/camera/{ID}/set-markers
             ]
         },
         {
-            "id": 2,
+            "id": "marker222",
             "name": "marker_2",
             "type": "circle",
-            "size": 0.10,
+            "size": 100,
             "roi": [
                 0, 0, 0, 0
             ],
@@ -332,9 +319,9 @@ POST /api/v1/camera/{ID}/set-markers
 ```
 
 
-## 抓拍标靶基准图像
+## 初始化标靶检测
 
-指定相机 (ID) 抓拍基准图像
+设置检测参数，抓拍基准图像
 
 ```http
 POST /api/v1/camera/capture-reference-image
@@ -344,9 +331,10 @@ POST /api/v1/camera/capture-reference-image
 
 ```json
 {
-    "camera": 1,            // 相机ID
-    "sample": 10,           // 连续抓拍样本数
-    "save_path": "d:/temp"  // 保存路径 (可选)
+    "algorithm": "optical-flow",    // 对比算法: elliptic, optical-flow
+    "capture": "自动",              // 抓拍方式: 自动, 手动
+    "frequency": 30,               // 检测间隔 (分钟)
+    "sampleNumber": 5              // 采样数
 }
 ```
 
@@ -355,69 +343,14 @@ POST /api/v1/camera/capture-reference-image
 ```json
 {
     "status": 1,        // 返回状态 1 为成功, 0 为失败
-    "data": {
-        "reference_images": [
-            {
-                "camera": 1,                            // 标靶ID
-                "marker": 1,                            // 标靶ID
-                "reference": "d:/temp/ref_1_1.bmp"      // 图片路径
-            },
-            {
-                "camera": 1,
-                "marker": 2,
-                "reference": "d:/temp/ref_1_2.bmp"
-            },
-            ...
-        ]
-    }
 }
 ```
 
 
-## 执行对比
 
-指定相机 (ID) 计算标靶偏移
+## 开始自动对比
 
-```http
-POST /api/v1/camera/check-offset
-```
-
-#### Request
-
-```json
-{
-    "camera": 1,                    // 相机ID
-    "sample": 10,                   // 连续抓拍样本数
-    "algorithm": "optical-flow"     // 对比算法: elliptic, optical-flow
-}
-```
-
-#### Response
-
-```json
-{
-    "status": 1,        // 返回状态 1 为成功, 0 为失败
-    "data": {
-        "datetime": "2019-01-01 12:00:00",              // 对比时间, ISO-8601 格式
-        "camera": 1,                                    // 相机ID
-        "marker_offset": [
-            {
-                "marker": 1,                            // 标靶ID
-                "offset": [0.0, 0.0]                    // 偏移量 (m)
-            },
-            {
-                "marker": 2,
-                "offset": [0.0, 0.0]
-            },
-            ...
-        ]
-    }
-}
-```
-
-## 设置定时对比
-
-设置定时对比
+开始自动对比 (自动对比会在后台运行，不会阻塞UI)
 
 ```http
 POST /api/v1/camera/set-timed-check
@@ -426,12 +359,7 @@ POST /api/v1/camera/set-timed-check
 #### Request
 
 ```json
-{
-    "camera": 1,                    // 相机ID
-    "algorithm": "optical-flow",    // 对比算法: elliptic, optical-flow
-    "sample": 10,                   // 连续抓拍样本数
-    "interval": 3600                // 对比间隔 (s)
-}
+// 无需请求体
 ```
 
 #### Response
@@ -439,13 +367,6 @@ POST /api/v1/camera/set-timed-check
 ```json
 {
     "status": 1,        // 返回状态 1 为成功, 0 为失败
-    "data": {
-        "camera": 1,                            // 相机ID
-        "algorithm": "optical-flow",            // 对比算法: elliptic, optical-flow
-        "sample": 10,                           // 连续抓拍样本数
-        "interval": 3600,                       // 对比间隔 (s)
-        "start_time": "2019-01-01 12:00:00",    // 开始时间, ISO-8601 格式
-    }
 }
 ```
 
@@ -460,33 +381,6 @@ POST /api/v1/camera/cancel-timed-check
 #### Request
 
 ```json
-{
-    "camera": 1,        // 相机ID
-}
-```
-
-#### Response
-
-```json
-{
-    "status": 1,        // 返回状态 1 为成功, 0 为失败
-    "data": null
-}
-```
-
-
-
-## 获取定时对比状态
-
-获取定时对比状态
-
-```http
-GET /api/v1/camera/{ID}/get-timed-check
-```
-
-#### Request
-
-```json
 // 无需请求体
 ```
 
@@ -495,16 +389,9 @@ GET /api/v1/camera/{ID}/get-timed-check
 ```json
 {
     "status": 1,        // 返回状态 1 为成功, 0 为失败
-    "data": {
-        /* 当定时对比未设置时，data 字段为 null */
-        "camera": 1,                            // 相机ID
-        "algorithm": "optical-flow",            // 对比算法: elliptic, optical-flow
-        "sample": 10,                           // 连续抓拍样本数
-        "interval": 3600,                       // 对比间隔 (s)
-        "start_time": "2019-01-01 12:00:00",    // 开始时间, ISO-8601 格式
-    }
 }
 ```
+
 
 ## 获取定时对比结果
 
@@ -527,27 +414,15 @@ GET /api/v1/camera/{ID}/get-timed-check-result
     "status": 1,        // 返回状态 1 为成功, 0 为失败
     "data": {
         /* 当定时对比未设置时，data 字段为 null */
-        "camera": 1,                            // 相机ID
+        "camera": "abcdefg",                    // 相机ID
         "algorithm": "optical-flow",            // 对比算法: elliptic, optical-flow
-        "sample": 10,                           // 连续抓拍样本数
+        "sample": 10,                           // 采样数
         "interval": 24,                         // 对比间隔 (小时)
         "start_time": "2019-01-01 12:00:00",    // 开始时间, ISO-8601 格式
         "results": [
-            {
-                "datetime": "2019-01-01 12:00:00",              // 对比时间, ISO-8601 格式
-                "marker_offset": [
-                    {
-                        "marker": 1,                            // 标靶ID
-                        "offset": [0.0, 0.0]                    // 偏移量 (m)
-                    },
-                    {
-                        "marker": 2,
-                        "offset": [0.0, 0.0]
-                    },
-                    ...
-                ]
-            },
-            ...
+            "/offset_plots/{camera_id1}/{marker_id1}", // 对比结果图像路径
+            "/offset_plots/{camera_id1}/{marker_id2}", // 对比结果图像路径
+            // ...
         ]
     }
 }
@@ -566,9 +441,8 @@ POST /api/v1/remote-server/set
 
 ```json
 {
-    "address": "192.168.0.1",   // 服务器地址
-    "port": 8080,               // 服务器端口
-    "protocol": "http"          // 服务器协议: http, https
+    "server1": "http://xxx.xxx.xxx.xxx/api/call",   // 服务器1地址
+    "server2": "http://xxx.xxx.xxx.xxx/api/call",   // 服务器2地址
 }
 ```
 
@@ -576,8 +450,7 @@ POST /api/v1/remote-server/set
 
 ```json
 {
-    "status": 1,        // 返回状态 1 为成功, 0 为失败
-    "data": null
+    "status": 1        // 返回状态 1 为成功, 0 为失败
 }
 ```
 
@@ -602,9 +475,8 @@ GET /api/v1/remote-server/get
 {
     "status": 1,        // 返回状态 1 为成功, 0 为失败
     "data": {
-        "address": "xxx.xxx.xxx.xxx",
-        "port": 8080,
-        "protocol": "http"
+        "server1": "http://xxx.xxx.xxx.xxx/api/call",
+        "server2": "http://xxx.xxx.xxx.xxx/api/call"
     }
 }
 ```

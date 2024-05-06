@@ -169,9 +169,9 @@ def calibrate_camera():
         pst.settings['cameras'][cam_id]['intrinsics'] = camMat.tolist()
         pst.settings['cameras'][cam_id]['distortion'] = distMat.tolist()
         pst.save_settings()
-        return jsonify(status=1, data=dict(message="标定成功"))
+        return jsonify(status=1)
     else:
-        return jsonify(status=0, data=dict(message="标定失败"))
+        return jsonify(status=0)
 
 @app.route('/api/v1/camera/<string:camera_id>/list-markers', methods=['GET'])
 def list_markers(camera_id):
@@ -235,7 +235,6 @@ def capture_reference_image():
         if os.path.exists(os.path.join("offsets", str(camera_id), "check_data")):
             shutil.rmtree(os.path.join("offsets", str(camera_id), "check_data"))
         os.makedirs(os.path.join("offsets", str(camera_id), "check_data"))
-        sample_num = pst.settings['capture']['sampleNumber']
         threading.Thread(target=af.get_image, args=(camera_id, base_image_path)).start()
         time.sleep(1)
     return jsonify(status=1, data={})
