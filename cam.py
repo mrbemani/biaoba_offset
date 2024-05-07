@@ -3,6 +3,7 @@ import sys
 import os
 import atexit
 import shutil
+from datetime import datetime
 
 import logging
 
@@ -39,14 +40,10 @@ import time
 
 
 from ctypes import *
-if os_type == 'linux':
-    libc = cdll.LoadLibrary("libc.so.6")
-elif os_type == 'darwin':
-    libc = cdll.LoadLibrary("libc.dylib")
 
 MvImport = "C:\\Program Files (x86)\\MVS\\Development\\Samples\\Python\\MvImport" #"./MvImport_win"
 if os_type == 'linux':
-    MvImport = "./MvImport_linux"
+    MvImport = "/opt/MVS/Samples/aarch64/Python/MvImport"
 elif os_type == 'darwin':
     MvImport = "/Library/MVS_SDK/Samples/Python/MvImport"
 
@@ -67,7 +64,7 @@ cameras = dict()
 MONO8 = 17301505
 MONO12 = 17825797
 
-bSaveBmp = True
+bSaveBmp = False
 nSaveNum = 20
 
 
@@ -82,50 +79,42 @@ def stop_all_cameras():
             del cam['deviceHandle']
     cv2.destroyAllWindows()
 
-
 # 为线程定义一个函数
 def work_thread(cam):
-    global bSaveBmp, nSaveNum
+    cam['bSave'] = False
     stOutFrame = MV_FRAME_OUT()
     memset(byref(stOutFrame), 0, sizeof(stOutFrame))
+    print("start capture ...", end='')
+    print("ok")
     while True:
-        #print("start capture ...", end='')
-        ret = cam['deviceHandle'].MV_CC_GetImageBuffer(stOutFrame, 1000)
-        #print("ok")
-        if None != stOutFrame.pBufAddr and 0 == ret:
-            frame_len = stOutFrame.stFrameInfo.nFrameLen
-            buf_image = None
-            if bSaveBmp is True:
-                #print ("Saving ... ")
-                #if len(cam['savedFiles']) >= nSaveNum:
-                    #bSaveBmp = False
-                #    print ("save image number enough!")
-                if stOutFrame.stFrameInfo.enPixelType == PixelType_Gvsp_Mono8:
-                    buf_image = (c_ubyte * frame_len)()
-                elif stOutFrame.stFrameInfo.enPixelType == PixelType_Gvsp_Mono12:
-                    print ("12")
-                    buf_image = (c_uint16 * frame_len)()
+        if ('frame' not in cam or cam['frame'] is None) or cam['bSave']:
+            ret = cam['deviceHandle'].MV_CC_GetImageBuffer(stOutFrame, 1000)
+            if None != stOutFrame.pBufAddr and 0 == ret:
+                print ("stOutFrame.stFrameInfo.nFrameLen")
+                frame_len = stOutFrame.stFrameInfo.nFrameLen
+                print (f"frame_len = {frame_len}")
+                # ret = cam['deviceHandle'].MV_CC_FreeImageBuffer(stOutFrame)
+                # continue
+                # here is ok <<<
+                #
                 g_rclock.acquire()
-                if os_type == 'win32':
-                    cdll.msvcrt.memcpy(byref(buf_image), stOutFrame.pBufAddr, frame_len)
+                buf_image = None
+                if stOutFrame.stFrameInfo.enPixelType == PixelType_Gvsp_Mono8:
+                    print ("mono8")
+                    buf_image = (c_ubyte * frame_len)()
                 else:
-                    libc.memcpy(byref(buf_image), stOutFrame.pBufAddr, frame_len)
-                #cam['frame'] = np.array(buf_image).reshape(stOutFrame.stFrameInfo.nHeight, stOutFrame.stFrameInfo.nWidth)
-                Save_Bmp(cam, buf_image, stOutFrame.stFrameInfo, False)
-                #if len(cam['savedFiles']) > 0:
-                #    print (cam['savedFiles'][-1])
+                    print ("Bad PixelType!!!! Must be \"PixelType_Gvsp_Mono8\"")
+                    nRet = cam['deviceHandle'].MV_CC_FreeImageBuffer(stOutFrame)
+                    g_rclock.release()
+                    return
+                memmove(buf_image, stOutFrame.pBufAddr, frame_len)
+                h, w = stOutFrame.stFrameInfo.nHeight, stOutFrame.stFrameInfo.nWidth
+                cam['frame'] = np.frombuffer(buf_image, dtype=np.uint8).copy().reshape(h, w)
+                nRet = cam['deviceHandle'].MV_CC_FreeImageBuffer(stOutFrame)
+                if cam['bSave'] is True:
+                    print ("Saving ... ")
+                    Save_Bmp(cam, cam['frame'], False)
                 g_rclock.release()
-            nRet = cam['deviceHandle'].MV_CC_FreeImageBuffer(stOutFrame)
-            if buf_image is not None:
-                if os_type == 'win32':
-                    del buf_image
-                else:
-                    libc.free(buf_image)
-        else:
-            pass
-            #print ("no data[0x%x]" % ret)
-        if g_bExit == True:
-            break
 
 
 def clear_saved_files(camera_id: str):
@@ -141,12 +130,14 @@ def clear_saved_files(camera_id: str):
         g_rclock.release()
         #cameras[camera_id]['savedFiles'].clear()
 
-def getCurrentFrame(camera_id: str):
+def get_frame(camera_id: str):
     global cameras
     frame = None
+    if camera_id not in cameras:
+        return None
     g_rclock.acquire()
-    if len(cameras[camera_id]['savedFiles']) > 0:
-        frame = cv2.imread(cameras[camera_id]['savedFiles'][-1])
+    frame = cameras[camera_id]['frame'].copy()
+    cameras[camera_id]['frame'] = None
     g_rclock.release()
     return frame
 
@@ -315,8 +306,48 @@ def close_camera(cam: any):
     return 0
 
 
+def Save_Bmp(cam, cvimage, bLock=True):
+    print ("saving bmp ...")
+    if cvimage is None:
+        return
+    
+    if bLock is True:
+        g_rclock.acquire()
+
+    if os.path.exists(TMP_DIR) is False:
+        os.makedirs(TMP_DIR)
+
+    if os.path.exists(os.path.join(TMP_DIR, cam['id'])) is False:
+        os.makedirs(os.path.join(TMP_DIR, cam['id']))
+
+    # Get the current date and time
+    current_datetime = datetime.now()
+
+    # Format the date and time as a string in the specified format
+    formatted_datetime = current_datetime.strftime('%Y%m%d%H%M%S')
+
+    file_path = os.path.join(TMP_DIR, cam['id'], str(int(current_datetime.timestamp()*1000)) + "_" + formatted_datetime + ".bmp")
+    
+    # save
+    cv2.imwrite(file_path, cvimage)
+    
+    cam['savedFiles'].append(file_path)
+    if len(cam['savedFiles']) > nSaveNum:
+        # remove the first file
+        sf = cam['savedFiles'].pop(0)
+        try:
+            os.remove(sf)
+        except:
+            cam_logger.warn(f"Error removing file: {sf}")
+
+    if bLock is True:
+        g_rclock.release()
+
+    return file_path
+
+
 # 存BMP图像
-def Save_Bmp(cam, buf_save_image, st_frame_info, bLock=True):
+def Save_Bmp_Old(cam, buf_save_image, st_frame_info, bLock=True):
 
     if 0 == buf_save_image:
         print ("buf_save_image is null")

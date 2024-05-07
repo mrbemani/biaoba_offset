@@ -7,12 +7,13 @@ import shutil
 from datetime import datetime, timedelta
 import argparse
 import threading
-from flask import Flask, jsonify, request, render_template, redirect, url_for, send_from_directory
+from flask import Flask, jsonify, request, render_template, redirect, url_for, send_from_directory, send_file
 from flask_cors import CORS
 import appfuncs as af
 import cv2
 import numpy as np
 import ts_mono_calib as tsmcalib
+from io import BytesIO
 
 try:
     import cam
@@ -78,19 +79,24 @@ def get_camera_list():
 @app.route('/api/v1/camera/<string:camera_id>/get-frame', methods=['GET'])
 def get_camera_frame(camera_id):
     # Implement logic to return the camera frame
-    data = {"frameurl": f"/get-camera-frame/{camera_id}.bmp"}
+    data = {"frameurl": f"/get-camera-frame/{camera_id}.png"}
     return jsonify(status=1, data=data)
 
 
-@app.route('/get-camera-frame/<string:camera_id>.bmp')
+@app.route('/get-camera-frame/<string:camera_id>.png')
 def get_camera_frame_jpg(camera_id):
     logger.debug(f'Getting frame for camera {camera_id}')
-    frames = [x for x in os.listdir(f'tmp/{camera_id}/') if x.endswith('.bmp')]
-    frames.sort()
-    print ("get-frame:", frames)
-    if frames is None or len(frames) == 0:
+    if camera_id not in cam.cameras:
         return send_from_directory('webui/assets', 'noimage.png')
-    return send_from_directory(f'tmp/{camera_id}', frames[-1])
+    frame = cam.get_frame(camera_id)
+    if frame is None or len(frame) == 0:
+        return send_from_directory('webui/assets', 'noimage.png')
+    # encode to png
+    imgdata = cv2.imencode('.png', frame)[1]#.tobytes()
+    # Convert buffer to byte stream
+    byte_io = BytesIO(imgdata)
+    # Create a response using the byte stream
+    return send_file(byte_io, mimetype='image/png')
 
 
 @app.route('/api/v1/camera/<string:camera_id>/get-info', methods=['GET'])
@@ -292,13 +298,7 @@ def get_timed_check_result(camera_id):
     if not 'results' in af.checkpoint_data:
         return jsonify(status=0, data=dict(message="检测结果未准备好"))
     
-    print (af.checkpoint_data)
-    # return plot images of offsets
-    #for camera_id in pst.settings['cameras']:
-    if True:
-        for marker_id in pst.settings['cameras'][camera_id]['markers']:
-            if os.path.exists(f'offsets/{camera_id}/{marker_id}_offset.png'):
-                offsets['results'].append(f"/offset_plots/{camera_id}/{marker_id}")
+    offsets['results'] = pst.load_offset_data(camera_id)
     return jsonify(status=1, data=offsets)
     
 
@@ -366,13 +366,13 @@ if __name__ == '__main__':
                     device.update(pst.settings['cameras'][device['id']])
                     device['new'] = 0
             if "settings" not in device:
-                device['settings'] = {"exposure": 1000.0, "gain": 0, 
+                device['settings'] = {"exposure": 100000.0, "gain": 0, 
                                       "pitch": 0, "roll": 0, "yaw": 0, 
                                       "x": 0, "y": 0, "z": 0}
             threading.Thread(target=cam.ts_start_camera, args=(device['id'], device['settings']['exposure'], device['settings']['gain']), daemon=True).start()
             time.sleep(0.5)
     time.sleep(1)
     print ("wait for camera to start...")
-    time.sleep(3)
+    time.sleep(0.1)
     print ("start server...")
-    app.run(debug=False)
+    app.run(host="0.0.0.0", port=5000, debug=False)

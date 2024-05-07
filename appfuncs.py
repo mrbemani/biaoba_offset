@@ -130,9 +130,10 @@ def plot_offsets(camera_id):
 
 
 def get_image(camera_id, save_file):
-    camdev = cam.cameras[camera_id]['deviceHandle']
+    camobj = cam.cameras[camera_id]
+    camdev = camobj['deviceHandle']
     cam.nSaveNum = 10
-    cam.bSaveBmp = True
+    camobj['bSave'] = True
     #cam.start_camera(camera_id, autoGrab=True)
     cam.clear_saved_files(camera_id=camera_id)
     base_image_array = []
@@ -144,6 +145,7 @@ def get_image(camera_id, save_file):
     fused_base_image = avgpixel.average_image_gray(base_image_array)
     cv2.imwrite(save_file, fused_base_image)
     cam.clear_saved_files(camera_id=camera_id)
+    camobj['bSave'] = False
 
 
 def perform_comparison(camera_id):
