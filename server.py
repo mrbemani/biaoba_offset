@@ -51,7 +51,7 @@ def get_offset_plot(camera_id, marker_id):
     # send image file
     if not os.path.exists(f'offsets/{camera_id}/{marker_id}_offset.png'):
         return send_from_directory('webui/assets', 'no_data.png')
-    return send_from_directory(f'offsets/{camera_id}', f'{marker_id}_offset.png')
+    return send_from_directory(f'offsets/{camera_id}', f'{marker_id}_offset.png?' + str(time.time()))
 
 @app.route('/api/v1/camera/list', methods=['GET'])
 def get_camera_list():
@@ -79,7 +79,7 @@ def get_camera_list():
 @app.route('/api/v1/camera/<string:camera_id>/get-frame', methods=['GET'])
 def get_camera_frame(camera_id):
     # Implement logic to return the camera frame
-    data = {"frameurl": f"/get-camera-frame/{camera_id}.png"}
+    data = {"frameurl": f"/get-camera-frame/{camera_id}.png?" + str(time.time())}
     return jsonify(status=1, data=data)
 
 
@@ -235,12 +235,16 @@ def capture_reference_image():
     )
     pst.save_settings()
     for camera_id in pst.settings['cameras']:
-        base_image_path = os.path.join("offsets", str(camera_id), "base_image.bmp")
+        camera_id_dir = os.path.join("offsets", str(camera_id))
+        base_image_path = os.path.join(camera_id_dir, "base_image.bmp")
         if os.path.exists(base_image_path):
             os.unlink(base_image_path)
-        if os.path.exists(os.path.join("offsets", str(camera_id), "check_data")):
-            shutil.rmtree(os.path.join("offsets", str(camera_id), "check_data"))
-        os.makedirs(os.path.join("offsets", str(camera_id), "check_data"))
+        target_image_path = os.path.join(camera_id_dir, "target_image.bmp")
+        if os.path.exists(target_image_path):
+            os.unlink(target_image_path)
+        if os.path.exists(os.path.join(camera_id_dir, "check_log")):
+            shutil.rmtree(os.path.join(camera_id_dir, "check_log"))
+        os.makedirs(os.path.join(camera_id_dir, "check_log"))
         threading.Thread(target=af.get_image, args=(camera_id, base_image_path)).start()
         time.sleep(1)
     return jsonify(status=1, data={})
