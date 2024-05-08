@@ -24,6 +24,10 @@ def find_marker(input_image: np.ndarray):
     w = min(input_image.shape[1] - x1, int(w * 1.2))
     h = min(input_image.shape[0] - y1, int(h * 1.2))
 
+    # if the area is too small, return None
+    if w < 32 or h < 32:
+        return None, None
+
     # find bounding ellipse
     ellipse = cv2.fitEllipse(cnt)
 

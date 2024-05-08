@@ -26,8 +26,6 @@ tslogger.addHandler(fh)
 
 
 
-
-
 try:
     import cam
 except:
@@ -171,12 +169,16 @@ def perform_comparison(camera_id):
         x, y, mmpp = compare_marker(b_roi, t_roi, MARKER_DIAMETER)
         if x is not None and y is not None and mmpp is not None:
             offsets[marker_id] = dict(x=x, y=y, mmpp=mmpp, time=datetime.now().isoformat())
+    if len(offsets) == 0:
+        return None, False, "No Marker Found in Image"
     return offsets, True, "Success"
 
 
 def compare_marker(base_marker_image, target_marker_image, MARKER_DIAMETER):
     # find marker ellipse
     ellipse, bbox = tsu.find_marker(base_marker_image)
+    if ellipse is None or bbox is None or ellipse[1][0] == 0 or ellipse[1][1] == 0:
+        return None, None, None
     mmpp = MARKER_DIAMETER / max(ellipse[1][0], ellipse[1][1])
     x, y = tg.perform_compare(base_marker_image, target_marker_image)
     return x, y, mmpp
@@ -244,7 +246,7 @@ def capture_check_thread():
                     # check if all samples are valid
                     if len(compareSamples) == 0:
                         print (f"Failed to compare marker for camera {camera_id}: {message}")
-                        break
+                        continue
                     # perform average
                     offsets = dict()
                     for marker_id in compareSamples[0]:
