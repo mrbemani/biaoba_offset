@@ -207,14 +207,29 @@ def set_markers(camera_id):
         rot = marker['rotation']
         roi = marker['roi']
         print (pos, rot, roi)
+        if type(pos) is str:
+            try:
+                pos = [float(x) for x in str(pos).split(',')]
+            except:
+                pos = [0, 0, 0]
+        if type(rot) is str:
+            try:
+                rot = [float(x) for x in str(rot).split(',')]
+            except:
+                rot = [0, 0, 0]
+        if type(roi) is str:
+            try:
+                roi = [float(x) for x in str(roi).split(',')]
+            except:
+                roi = [0.001, 0.001, 0.999, 0.999]
         mk_obj = dict(
             id=marker['id'], 
             name=marker['name'], 
             type=marker['type'],
-            position=[float(x) for x in str(pos).split(',')],
-            rotation=[float(x) for x in str(rot).split(',')],
+            position=pos,
+            rotation=rot,
             size=float(marker['size']),
-            roi=[float(x) for x in str(roi).split(',')],
+            roi=roi,
         )
         pst.settings['cameras'][camera_id]['markers'][marker['id']] = mk_obj
     pst.save_settings()
