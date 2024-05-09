@@ -159,6 +159,7 @@ def perform_comparison(camera_id):
     if base_image is None:
         return None, False, "基准图像加载失败"
     offsets = dict()
+    datetime_str = datetime.now().strftime("%Y%m%d%H%M00")
     for marker_id in pst.settings['cameras'][camera_id]['markers']:
         marker_roi = pst.settings['cameras'][camera_id]['markers'][marker_id]['roi']
         h, w = target_image.shape[:2]
@@ -167,6 +168,13 @@ def perform_comparison(camera_id):
         b_roi = base_image[marker_crop[1]:marker_crop[1]+marker_crop[3], marker_crop[0]:marker_crop[0]+marker_crop[2]]
         MARKER_DIAMETER = pst.settings['cameras'][camera_id]['markers'][marker_id]['size']
         x, y, mmpp = compare_marker(b_roi, t_roi, MARKER_DIAMETER)
+        # save b_roi and t_roi
+        if not os.path.exists(os.path.join("offsets", str(camera_id))):
+            os.makedirs(os.path.join("offsets", str(camera_id)))
+        if not os.path.exists(os.path.join("offsets", str(camera_id), "base_{marker_id}.bmp")):
+            cv2.imwrite(os.path.join("offsets", str(camera_id), f"base_{marker_id}.bmp"), b_roi)
+        if not os.path.exists(os.path.join("offsets", str(camera_id), f"target_{marker_id}_{datetime_str}.bmp")):
+            cv2.imwrite(os.path.join("offsets", str(camera_id), f"target_{marker_id}_{datetime_str}.bmp"), t_roi)
         if x is not None and y is not None and mmpp is not None:
             offsets[marker_id] = dict(x=x, y=y, mmpp=mmpp, time=datetime.now().isoformat())
     if len(offsets) == 0:
