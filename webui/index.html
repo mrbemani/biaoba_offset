@@ -979,14 +979,15 @@
               if (res.status === 1) {
                 console.log('res', res)
                 if (res.data) {
-                  const datas = res.data.results
+                  const data_results = res.data.results
                   const realtimeDataList = document.querySelector('#realtimeDataList')
                   let list = ''
-
+                  /*
                   datas.forEach(data => {
                     list += `<img src="${data}"><br/>`
                   })
-                  realtimeDataList.innerHTML = list
+                  */
+                  realtimeDataList.innerHTML = '<pre>' + data_results + '</pre>'
                 }
 
                 if (interval) {

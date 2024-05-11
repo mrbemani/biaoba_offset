@@ -3,6 +3,7 @@
 import sys
 import os
 import time
+import json
 import shutil
 from datetime import datetime, timedelta
 import argparse
@@ -318,6 +319,8 @@ def get_timed_check_result(camera_id):
         return jsonify(status=0, data=dict(message="检测结果未准备好"))
     
     offsets['results'] = pst.load_offset_data(camera_id)
+    # save to json
+    json.dump(offsets, open(f"offsets_results.json", "w"))
     return jsonify(status=1, data=offsets)
     
 

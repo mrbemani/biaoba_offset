@@ -160,6 +160,7 @@ def perform_comparison(camera_id):
         return None, False, "基准图像加载失败"
     offsets = dict()
     datetime_str = datetime.now().strftime("%Y%m%d%H%M00")
+    x_mot, y_mot = [], []
     for marker_id in pst.settings['cameras'][camera_id]['markers']:
         marker_roi = pst.settings['cameras'][camera_id]['markers'][marker_id]['roi']
         h, w = target_image.shape[:2]
@@ -168,6 +169,8 @@ def perform_comparison(camera_id):
         b_roi = base_image[marker_crop[1]:marker_crop[1]+marker_crop[3], marker_crop[0]:marker_crop[0]+marker_crop[2]]
         MARKER_DIAMETER = pst.settings['cameras'][camera_id]['markers'][marker_id]['size']
         x, y, mmpp = compare_marker(b_roi, t_roi, MARKER_DIAMETER)
+        x_mot.append(x)
+        y_mot.append(y)
         # save b_roi and t_roi
         if not os.path.exists(os.path.join("offsets", str(camera_id))):
             os.makedirs(os.path.join("offsets", str(camera_id)))
@@ -177,6 +180,20 @@ def perform_comparison(camera_id):
             cv2.imwrite(os.path.join("offsets", str(camera_id), f"target_{marker_id}_{datetime_str}.bmp"), t_roi)
         if x is not None and y is not None and mmpp is not None:
             offsets[marker_id] = dict(x=x, y=y, mmpp=mmpp, time=datetime.now().isoformat())
+    median_x = np.median(x_mot)
+    median_y = np.median(y_mot)
+    if np.std(x_mot) < 0.1:
+        for marker_id in offsets:
+            offsets[marker_id]['x'] = 0
+    else:
+        for marker_id in offsets:
+            offsets[marker_id]['x'] -= median_x
+    if np.std(y_mot) < 0.1:
+        for marker_id in offsets:
+            offsets[marker_id]['y'] = 0
+    else:
+        for marker_id in offsets:
+            offsets[marker_id]['y'] -= median_y
     if len(offsets) == 0:
         return None, False, "No Marker Found in Image"
     return offsets, True, "Success"
@@ -257,19 +274,33 @@ def capture_check_thread():
                         continue
                     # perform average
                     offsets = dict()
+                    x_mot, y_mot = [], []
                     for marker_id in compareSamples[0]:
-                        x = 0.0
-                        y = 0.0
-                        mmpp = 0.0
+                        e_x = []
+                        e_y = []
+                        e_mmpp = []
                         for i in range(len(compareSamples)):
-                            x += compareSamples[i][marker_id]['x']
-                            y += compareSamples[i][marker_id]['y']
-                            mmpp += compareSamples[i][marker_id]['mmpp']
-                        x /= len(compareSamples)
-                        y /= len(compareSamples)
-                        mmpp /= len(compareSamples)
-                        offsets[marker_id] = dict(x=x, y=y, mmpp=mmpp, time=datetime.now().isoformat())
+                            e_x.append(compareSamples[i][marker_id]['x'])
+                            e_y.append(compareSamples[i][marker_id]['y'])
+                            e_mmpp.append(compareSamples[i][marker_id]['mmpp'])
+                        offsets[marker_id] = dict(x=np.mean(e_x), y=np.mean(e_y), mmpp=np.mean(e_mmpp), time=datetime.now().isoformat())
+                        x_mot.append(np.mean(e_x))
+                        y_mot.append(np.mean(e_y))
                         print ("averaged result for camera %s marker %s" % (camera_id, marker_id))
+                    median_x = np.median(x_mot)
+                    median_y = np.median(y_mot)
+                    if np.std(x_mot) < 0.1:
+                        for marker_id in offsets:
+                            offsets[marker_id]['x'] = 0
+                    else:
+                        for marker_id in offsets:
+                            offsets[marker_id]['x'] -= median_x
+                    if np.std(y_mot) < 0.1:
+                        for marker_id in offsets:
+                            offsets[marker_id]['y'] = 0
+                    else:
+                        for marker_id in offsets:
+                            offsets[marker_id]['y'] -= median_y
                     # save averaged offsets
                     if success:
                         print (f"Success to compare marker for camera {camera_id}")
