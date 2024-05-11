@@ -332,7 +332,6 @@ def get_latest_offsets():
         return jsonify(status=0, data=dict(message="检测结果未准备好"))
 
     latest_offsets = dict(
-        checkpoint_time=af.checkpoint_data['checkpoint_time'],
         results=[]
     )
     for camera_id in af.checkpoint_data['results']:
