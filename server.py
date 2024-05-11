@@ -328,26 +328,26 @@ def get_timed_check_result(camera_id):
 def get_latest_offsets():
     # Implement logic to return the latest offsets
     print (af.checkpoint_data)
-    if not af.checkpoint_data:
+    if not af.checkpoint_data or len(af.checkpoint_data) < 1:
         return jsonify(status=0, data=dict(message="检测结果未准备好"))
 
     latest_offsets = dict(
         results=[]
     )
-    for camera_id in af.checkpoint_data['results']:
-        for marker_id in af.checkpoint_data['results'][camera_id]:
-            mmpp = af.checkpoint_data['results'][camera_id][marker_id]['mmpp']
-            x = af.checkpoint_data['results'][camera_id][marker_id]['x'] * mmpp
-            y = af.checkpoint_data['results'][camera_id][marker_id]['y'] * mmpp
+    for camera_id in af.checkpoint_data:
+        for marker_id in af.checkpoint_data[camera_id]:
+            mmpp = af.checkpoint_data[camera_id][marker_id]['mmpp']
+            x = af.checkpoint_data[camera_id][marker_id]['x'] * mmpp
+            y = af.checkpoint_data[camera_id][marker_id]['y'] * mmpp
             latest_offsets['results'].append({
                 'camera': camera_id,
                 'marker': marker_id,
                 'offset': [x, y]
             })
     motion_array = []
-    for camera_id in af.checkpoint_data['results']:
-        for marker_id in af.checkpoint_data['results'][camera_id]:
-            motion_array.append(af.checkpoint_data['results'][camera_id][marker_id]['motion'])
+    for camera_id in af.checkpoint_data:
+        for marker_id in af.checkpoint_data[camera_id]:
+            motion_array.append(af.checkpoint_data[camera_id][marker_id]['motion'])
     latest_offsets['motion'] = np.mean(motion_array)
 
     print (latest_offsets)
