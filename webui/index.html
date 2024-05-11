@@ -974,7 +974,7 @@
           }
 
           api
-            .get(`/api/v1/camera/${id}/get-timed-check-result`) // 正式接口: /api/v1/camera/{ID}/get-timed-check-result
+            .get(`/api/v1/latest-offsets`) // 正式接口: /api/v1/latest-offsets
             .then(res => {
               if (res.status === 1) {
                 console.log('res', res)
@@ -982,12 +982,12 @@
                   const data_results = res.data.results
                   const realtimeDataList = document.querySelector('#realtimeDataList')
                   let list = ''
-                  /*
-                  datas.forEach(data => {
-                    list += `<img src="${data}"><br/>`
+                  data_results.forEach(data => {
+                    data.forEach(res => {
+                      list += `<p>标靶ID: ${res.marker}, 偏移量(mm): ${res.offset.x}, ${res.offset.y}</p>`
+                    })
                   })
-                  */
-                  realtimeDataList.innerHTML = '<pre>' + data_results + '</pre>'
+                  realtimeDataList.innerHTML = list
                 }
 
                 if (interval) {

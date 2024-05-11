@@ -320,9 +320,34 @@ def get_timed_check_result(camera_id):
     
     offsets['results'] = pst.load_offset_data(camera_id)
     # save to json
-    json.dump(offsets, open(f"offsets_results.json", "w"))
+    json.dump(offsets, open(f"offsets_results_{camera_id}.json", "w"))
     return jsonify(status=1, data=offsets)
-    
+
+
+@app.route('/api/v1/latest-offsets', methods=['GET'])
+def get_latest_offsets():
+    # Implement logic to return the latest offsets
+    print (af.checkpoint_data)
+    if not af.checkpoint_data:
+        return jsonify(status=0, data=dict(message="检测结果未准备好"))
+
+    latest_offsets = dict(
+        checkpoint_time=af.checkpoint_data['checkpoint_time'],
+        results=[]
+    )
+    for camera_id in af.checkpoint_data['results']:
+        for marker_id in af.checkpoint_data['results'][camera_id]:
+            mmpp = af.checkpoint_data['results'][camera_id][marker_id]['mmpp']
+            x = af.checkpoint_data['results'][camera_id][marker_id]['x'] * mmpp
+            y = af.checkpoint_data['results'][camera_id][marker_id]['y'] * mmpp
+            latest_offsets['results'].append({
+                'camera': camera_id,
+                'marker': marker_id,
+                'offset': [x, y]
+            })
+
+    return jsonify(status=1, data=latest_offsets)
+
 
 @app.route('/api/v1/remote-server/set', methods=['POST'])
 def set_remote_server():
