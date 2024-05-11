@@ -983,9 +983,7 @@
                   const realtimeDataList = document.querySelector('#realtimeDataList')
                   let list = ''
                   data_results.forEach(data => {
-                    data.forEach(res => {
-                      list += `<p>标靶ID: ${res.marker}, 偏移量(mm): ${res.offset.x}, ${res.offset.y}</p>`
-                    })
+                    list += `<dt>相机: [${res.camera}] - 标靶: ${res.marker}</dt> <dd>偏移量(mm): ${res.offset.x}, ${res.offset.y}</dd>`
                   })
                   realtimeDataList.innerHTML = list
                 }
