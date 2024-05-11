@@ -345,6 +345,13 @@ def get_latest_offsets():
                 'marker': marker_id,
                 'offset': [x, y]
             })
+    motion_array = []
+    for camera_id in af.checkpoint_data['results']:
+        for marker_id in af.checkpoint_data['results'][camera_id]:
+            motion_array.append(af.checkpoint_data['results'][camera_id][marker_id]['motion'])
+    latest_offsets['motion'] = np.mean(motion_array)
+
+    print (latest_offsets)
 
     return jsonify(status=1, data=latest_offsets)
 

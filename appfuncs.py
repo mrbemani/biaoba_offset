@@ -174,10 +174,10 @@ def perform_comparison(camera_id):
         # save b_roi and t_roi
         if not os.path.exists(os.path.join("offsets", str(camera_id))):
             os.makedirs(os.path.join("offsets", str(camera_id)))
-        if not os.path.exists(os.path.join("offsets", str(camera_id), "base_{marker_id}.bmp")):
-            cv2.imwrite(os.path.join("offsets", str(camera_id), f"base_{marker_id}.bmp"), b_roi)
-        if not os.path.exists(os.path.join("offsets", str(camera_id), f"target_{marker_id}_{datetime_str}.bmp")):
-            cv2.imwrite(os.path.join("offsets", str(camera_id), f"target_{marker_id}_{datetime_str}.bmp"), t_roi)
+        if not os.path.exists(os.path.join("offsets", str(camera_id), f"{marker_id}_0.bmp")):
+            cv2.imwrite(os.path.join("offsets", str(camera_id), f"{marker_id}_0.bmp"), b_roi)
+        if not os.path.exists(os.path.join("offsets", str(camera_id), f"{marker_id}_1.bmp")):
+            cv2.imwrite(os.path.join("offsets", str(camera_id), f"{marker_id}_1.bmp"), t_roi)
         if x is not None and y is not None and mmpp is not None:
             offsets[marker_id] = dict(x=x, y=y, mmpp=mmpp, time=datetime.now().isoformat())
     if len(x_mot) > 1:
