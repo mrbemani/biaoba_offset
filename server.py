@@ -16,6 +16,9 @@ import numpy as np
 import ts_mono_calib as tsmcalib
 from io import BytesIO
 
+from pywebio.platform.flask import webio_view
+from webio import webui 
+
 try:
     import cam
 except:
@@ -39,7 +42,7 @@ def debug_get_settings():
     return jsonify(status=1, data=pst.settings)
 
 
-@app.route('/', methods=['GET'])
+@app.route('/owebui', methods=['GET'])
 def index():
     return send_from_directory('webui', 'index.html')
 
@@ -52,7 +55,7 @@ def get_offset_plot(camera_id, marker_id):
     # send image file
     if not os.path.exists(f'offsets/{camera_id}/{marker_id}_offset.png'):
         return send_from_directory('webui/assets', 'no_data.png')
-    return send_from_directory(f'offsets/{camera_id}', f'{marker_id}_offset.png?' + str(time.time()))
+    return send_from_directory(f'offsets/{camera_id}', f'{marker_id}_offset.png')
 
 @app.route('/api/v1/camera/list', methods=['GET'])
 def get_camera_list():
@@ -252,14 +255,10 @@ def capture_reference_image():
     pst.save_settings()
     for camera_id in pst.settings['cameras']:
         camera_id_dir = os.path.join("offsets", str(camera_id))
+        if os.path.exists(camera_id_dir):
+            shutil.rmtree(camera_id_dir)
+        os.makedirs(camera_id_dir)
         base_image_path = os.path.join(camera_id_dir, "base_image.bmp")
-        if os.path.exists(base_image_path):
-            os.unlink(base_image_path)
-        target_image_path = os.path.join(camera_id_dir, "target_image.bmp")
-        if os.path.exists(target_image_path):
-            os.unlink(target_image_path)
-        if os.path.exists(os.path.join(camera_id_dir, "check_log")):
-            shutil.rmtree(os.path.join(camera_id_dir, "check_log"))
         os.makedirs(os.path.join(camera_id_dir, "check_log"))
         threading.Thread(target=af.get_image, args=(camera_id, base_image_path)).start()
         time.sleep(1)
@@ -292,17 +291,24 @@ def cancel_timed_check():
 def get_timed_check_result(camera_id):
     if camera_id not in pst.settings['cameras']:
         return jsonify(status=0, data=dict(message=f"相机{camera_id}不存在"))
+    print (1)
     if pst.settings['capture']['running'] == False:
         return jsonify(status=0, data=dict(message="检测没有在运行中"))
     pst_cst = pst.settings['capture']['start_time']
+    print (2)
     if pst_cst is None:
+        print (3)
         return jsonify(status=0, data=dict(message="检测没有在运行中"))
     elif type(pst_cst) is str:
+        print (4)
         cap_start_time = datetime.fromisoformat(pst_cst).timestamp()
         if cap_start_time > time.time():
+            print (5)
             return jsonify(status=0, data=dict(message="检测没有在运行中"))
     elif type(pst_cst) in [int, float]:
+        print (6)
         if pst_cst > time.time():
+            print (7)
             return jsonify(status=0, data=dict(message="检测没有在运行中"))
     offsets = dict(
         camera=camera_id,
@@ -310,17 +316,19 @@ def get_timed_check_result(camera_id):
         sample=pst.settings['capture']['sampleNumber'],
         interval=pst.settings['capture']['interval'],
         start_time=pst.settings['capture']['start_time'],
-        results=[]
+        results=None
     )
-    
-    if not 'checkpoint_time' in af.checkpoint_data:
+    print (8)
+    if len(af.checkpoint_data) <= 0:
+        print (9)
         return jsonify(status=0, data=dict(message="检测结果未准备好"))
-    if not 'results' in af.checkpoint_data:
-        return jsonify(status=0, data=dict(message="检测结果未准备好"))
+    print (af.checkpoint_data)
     
-    offsets['results'] = pst.load_offset_data(camera_id)
+    offsets['results'] = af.checkpoint_data
     # save to json
+    print (11)
     json.dump(offsets, open(f"offsets_results_{camera_id}.json", "w"))
+    print (12)
     return jsonify(status=1, data=offsets)
 
 
@@ -374,6 +382,10 @@ def get_remote_server():
     return jsonify(status=1, data=servers)
 
 
+app.add_url_rule('/', 'webio_view', view_func=webio_view(webui), methods=['GET', 'POST', 'OPTIONS'])
+
+
+
 if __name__ == '__main__':
     import uuid
     if not os.path.exists("offsets"):
@@ -418,7 +430,7 @@ if __name__ == '__main__':
                     device.update(pst.settings['cameras'][device['id']])
                     device['new'] = 0
             if "settings" not in device:
-                device['settings'] = {"exposure": 100000.0, "gain": 0, 
+                device['settings'] = {"exposure": 0.0, "gain": 0, 
                                       "pitch": 0, "roll": 0, "yaw": 0, 
                                       "x": 0, "y": 0, "z": 0}
             threading.Thread(target=cam.ts_start_camera, args=(device['id'], device['settings']['exposure'], device['settings']['gain']), daemon=True).start()

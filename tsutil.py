@@ -7,9 +7,13 @@ import numpy as np
 
 # find the marker in the input image
 def find_marker(input_image: np.ndarray):
-    ret, input_image_thresh = cv2.threshold(input_image, 60, 255, cv2.THRESH_BINARY)
+    input_image = cv2.equalizeHist(input_image)
+    ret, input_image_thresh = cv2.threshold(input_image, 127, 255, cv2.THRESH_BINARY)
+    # dilate the image
+    kernel = np.ones((3, 3), np.uint8)
+    input_image_dilated_thresh = cv2.dilate(input_image_thresh, kernel, iterations=1)
     # find input contours
-    contours, hierarchy = cv2.findContours(input_image_thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv2.findContours(input_image_dilated_thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     # sort contours by area (largest first)
     contours = sorted(contours, key=cv2.contourArea, reverse=True)
     # find the biggest area
@@ -28,8 +32,11 @@ def find_marker(input_image: np.ndarray):
     if w < 32 or h < 32:
         return None, None
 
-    # find bounding ellipse
-    ellipse = cv2.fitEllipse(cnt)
+    try:
+        # find bounding ellipse
+        ellipse = cv2.fitEllipse(cnt)
+    except:
+        ellipse = ((w/2, h/2), (w/2, h/2), 0)
 
     return ellipse, (x1, y1, w, h)
 

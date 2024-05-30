@@ -215,13 +215,17 @@ def get_camera_list(return_json=False, force_search=False):
         return deviceList, True, deviceList.nDeviceNum
 
 
-def set_camera_params(cam_id: str, exposureTime: float = 2000.0, gain: float = -9999.0):
+def set_camera_params(cam_id: str, exposureTime: float = 0.0, gain: float = 0.0):
     if cam_id not in cameras:
         return -1
     cam = cameras[cam_id]['deviceHandle']
-    ret = cam.MV_CC_SetEnumValue("ExposureAuto", 0)
-    time.sleep(0.2)
-    ret = cam.MV_CC_SetFloatValue("ExposureTime", exposureTime)
+    ret = 0
+    if exposureTime <= 0:
+        ret = cam.MV_CC_SetEnumValue("ExposureAuto", 1)
+    else:
+        ret = cam.MV_CC_SetEnumValue("ExposureAuto", 0)
+        time.sleep(0.2)
+        ret = cam.MV_CC_SetFloatValue("ExposureTime", exposureTime)
     if ret != 0:
         print ("set ExposureTime fail! ret[0x%x]" % ret)
         return ret
@@ -238,9 +242,13 @@ def set_camera_exposure(cam_id: str, exposureTime: float):
     if cam_id not in cameras:
         return -1
     cam = cameras[cam_id]['deviceHandle']
-    ret = cam.MV_CC_SetEnumValue("ExposureAuto", 0)
-    time.sleep(0.2)
-    ret = cam.MV_CC_SetFloatValue("ExposureTime", exposureTime)
+    ret = 0
+    if exposureTime <= 0:
+        ret = cam.MV_CC_SetEnumValue("ExposureAuto", 1)
+    else:
+        ret = cam.MV_CC_SetEnumValue("ExposureAuto", 0)
+        time.sleep(0.2)
+        ret = cam.MV_CC_SetFloatValue("ExposureTime", exposureTime)
     if ret != 0:
         print ("set ExposureTime fail! ret[0x%x]" % ret)
         return ret
@@ -398,7 +406,7 @@ def Save_Bmp_Old(cam, buf_save_image, st_frame_info, bLock=True):
     return ret
 
 
-def ts_start_camera(cam_id: str, exposure_time: float = 2000.0, gain: float = 0.0, pixelFormat: int = PixelType_Gvsp_Mono8):
+def ts_start_camera(cam_id: str, exposure_time: float = 0.0, gain: float = 0.0, pixelFormat: int = PixelType_Gvsp_Mono8):
     global g_bExit, cameras
     
     # ch:创建相机实例 | en:Creat Camera Object
@@ -445,9 +453,13 @@ def ts_start_camera(cam_id: str, exposure_time: float = 2000.0, gain: float = 0.
         print ("set PixelFormat fail! ret[0x%x]" % ret)
         sys.exit()
     
-    ret = cam.MV_CC_SetEnumValue("ExposureAuto", 0)
-    time.sleep(0.2)
-    ret = cam.MV_CC_SetFloatValue("ExposureTime", exposure_time)
+    ret = 0
+    if exposure_time <= 0:
+        ret = cam.MV_CC_SetEnumValue("ExposureAuto", 1)
+    else:
+        ret = cam.MV_CC_SetEnumValue("ExposureAuto", 0)
+        time.sleep(0.2)
+        ret = cam.MV_CC_SetFloatValue("ExposureTime", exposure_time)
     if ret != 0:
         print ("set ExposureTime fail! ret[0x%x]" % ret)
         sys.exit()

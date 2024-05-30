@@ -1,0 +1,12 @@
+pyyaml
+pyserial
+pywebio
+prompt_toolkit
+fire
+opencv-python
+opencv-contrib-python
+numpy
+scipy
+matplotlib
+flask
+flask_cors

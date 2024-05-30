@@ -2,7 +2,7 @@
 
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 import traceback
 import requests
 import cv2
@@ -109,19 +109,38 @@ def plot_offsets(camera_id):
     for marker_id in offsets:
         plt.figure()
         # plot line chart
+        x_axis = []
+        time_start_str = ''
+        time_start = None
+        if len(offsets[marker_id]['time']) > 0:
+            time_start = datetime.fromisoformat(offsets[marker_id]['time'][0])
+        if len(offsets[marker_id]['time']) == 1:
+            x_axis.append(0)
+        else:
+            for idx, t_str in enumerate(offsets[marker_id]['time']):
+                t = datetime.fromisoformat(t_str)
+                if idx == 0:
+                    time_gap = 0
+                else:
+                    time_gap = (t - datetime.fromisoformat(offsets[marker_id]['time'][0])).total_seconds() / 3600
+                x_axis.append(time_gap)
         plt.plot(
-            offsets[marker_id]['time'],
+            x_axis,
             np.float32(offsets[marker_id]['x']) * np.float32(offsets[marker_id]['mmpp']), 
             marker='o', linestyle='-', color='b'
         )
         plt.plot(
-            offsets[marker_id]['time'],
+            x_axis,
             np.float32(offsets[marker_id]['y']) * np.float32(offsets[marker_id]['mmpp']), 
             marker='o', linestyle='-', color='r'
-        )        
-        plt.xlabel('datetime')
+        )
+        plt.legend(['x', 'y'])
+        plt.xlabel('time (hours)')
         plt.ylabel('x, y (mm)')
-        plt.title(f'Camera {camera_id} Marker {marker_id} Offsets')
+        time_gap = None
+        if time_start is not None:
+            time_start_str = time_start.strftime("%Y-%m-%d %H:%M:%S")
+        plt.title(f'{marker_id} - {time_start_str}')
         plt.grid()
         # save figure
         plt.savefig(f'offsets/{camera_id}/{marker_id}_offset.png')
@@ -169,6 +188,8 @@ def perform_comparison(camera_id):
         b_roi = base_image[marker_crop[1]:marker_crop[1]+marker_crop[3], marker_crop[0]:marker_crop[0]+marker_crop[2]]
         MARKER_DIAMETER = pst.settings['cameras'][camera_id]['markers'][marker_id]['size']
         x, y, mmpp = compare_marker(b_roi, t_roi, MARKER_DIAMETER)
+        if x == 0 and y == 0:
+            continue
         x_mot.append(x)
         y_mot.append(y)
         # save b_roi and t_roi
@@ -176,8 +197,7 @@ def perform_comparison(camera_id):
             os.makedirs(os.path.join("offsets", str(camera_id)))
         if not os.path.exists(os.path.join("offsets", str(camera_id), f"{marker_id}_0.bmp")):
             cv2.imwrite(os.path.join("offsets", str(camera_id), f"{marker_id}_0.bmp"), b_roi)
-        if not os.path.exists(os.path.join("offsets", str(camera_id), f"{marker_id}_1.bmp")):
-            cv2.imwrite(os.path.join("offsets", str(camera_id), f"{marker_id}_1.bmp"), t_roi)
+        cv2.imwrite(os.path.join("offsets", str(camera_id), f"{marker_id}_1.bmp"), t_roi)
         if x is not None and y is not None and mmpp is not None:
             offsets[marker_id] = dict(x=x, y=y, mmpp=mmpp, time=datetime.now().isoformat())
     if len(x_mot) > 1:
@@ -291,13 +311,13 @@ def capture_check_thread():
                     if len(x_mot) > 1:
                         median_x = np.median(x_mot)
                         median_y = np.median(y_mot)
-                        if np.std(x_mot) < 0.1:
+                        if np.std(x_mot) < 0.16:
                             for marker_id in offsets:
                                 offsets[marker_id]['x'] = 0
                         else:
                             for marker_id in offsets:
                                 offsets[marker_id]['x'] -= median_x
-                        if np.std(y_mot) < 0.1:
+                        if np.std(y_mot) < 0.16:
                             for marker_id in offsets:
                                 offsets[marker_id]['y'] = 0
                         else:

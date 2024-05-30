@@ -111,8 +111,10 @@ def perform_compare(img1, img2, winSize=11, maxLevel=40, criteria_esp=0.001, cri
     # 计算平均移动距离
     #average_distance = calculate_trimmed_mean(distances)
     # guassian weighted average of the movements
-    average_distance = np.average(movements, axis=0, weights=calculate_gaussian_weights(movements))
-    
-    return average_distance
+    try:
+        average_distance = np.average(movements, axis=0, weights=calculate_gaussian_weights(movements))
+        return average_distance
+    except:
+        return (0, 0)
 
 
