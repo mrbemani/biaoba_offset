@@ -3,15 +3,22 @@
 __author__ = 'Mr.Bemani'
 
 import cv2
+import time
 import numpy as np
 
 # find the marker in the input image
 def find_marker(input_image: np.ndarray):
     input_image = cv2.equalizeHist(input_image)
+    # save
+    cv2.imwrite(f"marker_enhanced.jpg", input_image)
     ret, input_image_thresh = cv2.threshold(input_image, 127, 255, cv2.THRESH_BINARY)
+    # save
+    cv2.imwrite(f"marker_threshold.jpg", input_image_thresh)
     # dilate the image
     kernel = np.ones((3, 3), np.uint8)
     input_image_dilated_thresh = cv2.dilate(input_image_thresh, kernel, iterations=1)
+    # save
+    cv2.imwrite(f"marker_dilated.jpg", input_image_dilated_thresh)
     # find input contours
     contours, hierarchy = cv2.findContours(input_image_dilated_thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     # sort contours by area (largest first)
@@ -30,6 +37,7 @@ def find_marker(input_image: np.ndarray):
 
     # if the area is too small, return None
     if w < 32 or h < 32:
+        print (f"Area too small: {w}, {h}")
         return None, None
 
     try:

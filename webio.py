@@ -231,6 +231,7 @@ def step_setup_markers():
             pwo.put_error('标记设置失败')
             return 2
         pwo.put_info('标记设置成功')
+        pwo.put_button('完成', onclick=webui)
         return 0
     except:
         print (traceback.format_exc())
@@ -296,18 +297,17 @@ def webui_stop_task():
         pwo.put_error(traceback.format_exc())
 
 
-def is_camera_set():
+def is_camera_set(idx=0):
     cam_is_set = False
-    camera = None
+    cameras = []
     if 'cameras' in settings and len(settings['cameras']) > 0:
         print (settings['cameras'])
         for cam_id in settings['cameras']:
-            camera = settings['cameras'][cam_id]
-            break
-        if 'markers' in camera and len(camera['markers']) > 0:
+            cameras.append(settings['cameras'][cam_id])
+        if len(cameras) > 0 and 'markers' in cameras[0] and len(cameras[0]['markers']) > 0:
             cam_is_set = True
             pwo.put_info('相机已设置')
-    return cam_is_set, camera
+    return cam_is_set, cameras[0] if len(cameras) > 0 else None
 
 
 def get_offset_results(cam_id):
@@ -336,6 +336,7 @@ def webui_device_reboot():
 
 
 def webui():
+    pwo.clear()
     pwo.put_info('请稍等 ... ')
     cam_is_set, camera = is_camera_set()
     camera_id = None
@@ -348,16 +349,34 @@ def webui():
         if 'capture' in settings and settings['capture']['running'] is True:
             task_is_running = True
             results = get_offset_results(camera_id)
+            offsets_data_list = []
             if type(results) is not None:
-                # plots = []
-                for marker_id in camera['markers']:
-                    pwo.put_image(f'/offset_plots/{camera_id}/{marker_id}?{time.time()}')
-                pwo.put_file('下载对比结果', json.dumps(results), f'{camera_id}.json')
+                try:
+                    # plots = []
+                    for marker_id in camera['markers']:
+                        pwo.put_image(f'/offset_plots/{camera_id}/{marker_id}?{time.time()}')
+                        pwo.put_row([
+                            pwo.put_image(f'/offset/assets/{camera_id}/{marker_id}_0.bmp?{time.time()}', width='256px', height='256px'),
+                            pwo.put_image(f'/offset/assets/{camera_id}/{marker_id}_1.bmp?{time.time()}', width='256px', height='256px')
+                        ])
+                        if type(results) is dict:
+                            offsets_data_list.append(dict(
+                                marker_id=marker_id, 
+                                x=results[camera_id][marker_id]['x']*results[camera_id][marker_id]['mmpp'],
+                                y=results[camera_id][marker_id]['y']*results[camera_id][marker_id]['mmpp']))
+                    if len(offsets_data_list) > 0:
+                        pwo.put_table(offsets_data_list)
+                except:
+                    pwo.put_error('结果还未生成, 请稍后查看')
         else:
             task_is_running = False
     
-    pwo.put_markdown('### 安装设置')
-    pwo.put_button('设置相机与标靶', onclick=webui_setup)
+    
+    if cam_is_set and task_is_running:
+        pwo.put_info('对比任务正在运行 ... ')
+    else:
+        pwo.put_markdown('### 安装设置')
+        pwo.put_button('设置相机与标靶', onclick=webui_setup)
     
     if cam_is_set:
         pwo.put_markdown('### 对比任务')

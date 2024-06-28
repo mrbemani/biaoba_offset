@@ -187,7 +187,7 @@ def perform_comparison(camera_id):
         t_roi = target_image[marker_crop[1]:marker_crop[1]+marker_crop[3], marker_crop[0]:marker_crop[0]+marker_crop[2]]
         b_roi = base_image[marker_crop[1]:marker_crop[1]+marker_crop[3], marker_crop[0]:marker_crop[0]+marker_crop[2]]
         MARKER_DIAMETER = pst.settings['cameras'][camera_id]['markers'][marker_id]['size']
-        x, y, mmpp = compare_marker(b_roi, t_roi, MARKER_DIAMETER)
+        x, y, mmpp = compare_marker(b_roi, t_roi, MARKER_DIAMETER, pst.settings['capture']['algorithm'])
         if x == 0 and y == 0:
             continue
         x_mot.append(x)
@@ -215,19 +215,29 @@ def perform_comparison(camera_id):
         else:
             for marker_id in offsets:
                 offsets[marker_id]['y'] -= median_y
-    if len(offsets) == 0:
-        return None, False, "No Marker Found in Image"
+    #if len(offsets) == 0:
+    #    return None, False, "No Marker Found in Image"
     return offsets, True, "Success"
 
 
-def compare_marker(base_marker_image, target_marker_image, MARKER_DIAMETER):
+def compare_marker(base_marker_image, target_marker_image, MARKER_DIAMETER, algorithm = 'optical-flow'):
     # find marker ellipse
     ellipse, bbox = tsu.find_marker(base_marker_image)
     if ellipse is None or bbox is None or ellipse[1][0] == 0 or ellipse[1][1] == 0:
         return None, None, None
     mmpp = MARKER_DIAMETER / max(ellipse[1][0], ellipse[1][1])
-    x, y = tg.perform_compare(base_marker_image, target_marker_image)
-    return x, y, mmpp
+    if algorithm == 'ellipse': # old algorithm
+        target_ellipse, target_bbox = tg.find_marker(target_marker_image)
+        if target_ellipse is None or target_bbox is None or target_ellipse[1][0] == 0 or target_ellipse[1][1] == 0:
+            return None, None, None
+        x = (target_ellipse[0][0] - ellipse[0][0])
+        y = (target_ellipse[0][1] - ellipse[0][1])
+        return x, y, mmpp
+    elif algorithm == 'optical-flow': # new algorithm
+        x, y = tg.perform_compare(base_marker_image, target_marker_image)
+        return x, y, mmpp
+    else:
+        return None, None, None
 
 
 def capture_check_thread():
@@ -304,7 +314,7 @@ def capture_check_thread():
                             e_x.append(compareSamples[i][marker_id]['x'])
                             e_y.append(compareSamples[i][marker_id]['y'])
                             e_mmpp.append(compareSamples[i][marker_id]['mmpp'])
-                        offsets[marker_id] = dict(x=np.mean(e_x), y=np.mean(e_y), mmpp=np.mean(e_mmpp), time=datetime.now().isoformat())
+                        offsets[marker_id] = dict(x=float(np.mean(e_x)), y=float(np.mean(e_y)), mmpp=float(np.mean(e_mmpp)), time=datetime.now().isoformat())
                         x_mot.append(np.mean(e_x))
                         y_mot.append(np.mean(e_y))
                         print ("averaged result for camera %s marker %s" % (camera_id, marker_id))
@@ -316,13 +326,13 @@ def capture_check_thread():
                                 offsets[marker_id]['x'] = 0
                         else:
                             for marker_id in offsets:
-                                offsets[marker_id]['x'] -= median_x
+                                offsets[marker_id]['x'] -= float(median_x)
                         if np.std(y_mot) < 0.16:
                             for marker_id in offsets:
                                 offsets[marker_id]['y'] = 0
                         else:
                             for marker_id in offsets:
-                                offsets[marker_id]['y'] -= median_y
+                                offsets[marker_id]['y'] -= float(median_y)
                     # save averaged offsets
                     if success:
                         print (f"Success to compare marker for camera {camera_id}")

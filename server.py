@@ -2,6 +2,11 @@
 
 import sys
 import os
+
+APP_BASE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
+os.chdir(APP_BASE_DIR)
+os.environ["APP_BASE_DIR"] = APP_BASE_DIR
+
 import time
 import json
 import shutil
@@ -40,6 +45,11 @@ if not os.path.exists(SYS_TEMP_DIR):
 @app.route('/debug/get/settings', methods=['GET'])
 def debug_get_settings():
     return jsonify(status=1, data=pst.settings)
+
+
+@app.route('/offset/assets/<string:camera_id>/<path:path>', methods=['GET'])
+def send_offset_assets(camera_id, path):
+    return send_from_directory(f'offsets/{camera_id}', path)
 
 
 @app.route('/owebui', methods=['GET'])
@@ -327,7 +337,7 @@ def get_timed_check_result(camera_id):
     offsets['results'] = af.checkpoint_data
     # save to json
     print (11)
-    json.dump(offsets, open(f"offsets_results_{camera_id}.json", "w"))
+    print (offsets)
     print (12)
     return jsonify(status=1, data=offsets)
 

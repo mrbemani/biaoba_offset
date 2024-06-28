@@ -501,3 +501,11 @@ def ts_start_camera(cam_id: str, exposure_time: float = 0.0, gain: float = 0.0, 
     if ret != 0:
         print ("destroy handle fail! ret[0x%x]" % ret)
         sys.exit()
+
+
+if __name__ == '__main__':
+    print ("start ...")
+    get_camera_list()
+    ts_start_camera("DA1737882")
+    print ("end ...")
+    sys.exit()
